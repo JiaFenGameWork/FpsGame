@@ -6,7 +6,6 @@ using UnityEngine.AI;
 public class EnemyController : MonoBehaviour
 {
     public StateMachine StateMachine;
-    public NavMeshAgent Agent;
     Transform Target;
     [Header("设置，要挂一个nav agent在本体上")]
     //视野范围
@@ -21,7 +20,6 @@ public class EnemyController : MonoBehaviour
     // Start is called before the first frame update
     private void Awake()
     {
-        Agent = GetComponent<NavMeshAgent>();
         Target = GameObject.FindGameObjectWithTag("Player").transform;
 
         StateMachine = new StateMachine();
