@@ -1,8 +1,11 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Security.Cryptography;
 using Unity.Mathematics;
+using Unity.VisualScripting;
 using UnityEngine;
+using static UnityEditor.PlayerSettings;
 
 public class SparseOctree
 {
@@ -10,17 +13,12 @@ public class SparseOctree
     [System.Serializable]
     public class Octreenode
     {
+
         public Vector3 center;
         public float halfSize;
         public bool isLeaf;
-        public int[] ChildIndicces;
-        public enum NodeState
-        {
-            Empty,
-            Blocked,
-            Mixed
-        }
-        public NodeState state;
+        public int[] ChildIndices;
+        public List<int> triangleIndices;
         public Bounds GetBounds()
         {
             return new Bounds(center, Vector3.one * halfSize * 2);
@@ -33,242 +31,319 @@ public class SparseOctree
     [SerializeField] private int MaxDepth;
     [SerializeField] private float MinNodeSize;
     [SerializeField] private Bounds worldBounds;
+    [SerializeField] private Dictionary<Vector3Int, int> nodeDic;
 
+    Vector3[] cacheVertices;
+    int[] cachedTriangles;
+    public float MinSize => MinNodeSize;
     public int NodeCount => octreenodes.Count;
+    public Octreenode[] Allnodes => octreenodes.ToArray();
+    public Dictionary<Vector3Int, int> NodeDic => nodeDic;
     public Bounds WorldBounds => worldBounds;
 
-    public void BuildTree(Bounds bounds,int maxDepth,float minSize,LayerMask obstacleMask)
+    public void BuildTreeFromStatics(int maxDepth, float minSize)
     {
-        this.worldBounds = bounds;
+        MeshFilter[] filters = UnityEngine.Object.FindObjectsOfType<MeshFilter>();
+        nodeDic = new Dictionary<Vector3Int, int>();
+        List<Vector3> combineVertices = new List<Vector3>();
+        List<int> combinedIndices = new List<int>();
+
+        Vector3 min = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue);
+        Vector3 max = new Vector3(float.MinValue, float.MinValue, float.MinValue);
+
+        int vertexOffset = 0;
+
+        foreach (MeshFilter mf in filters)
+        {
+            if (!mf.gameObject.isStatic || mf.sharedMesh == null) continue;
+
+            Mesh m = mf.sharedMesh;
+            Transform t = mf.transform;
+
+            Vector3[] localvertice = m.vertices;
+            int[] localTris = m.triangles;
+
+            for (int i = 0; i < localvertice.Length; i++)
+            {
+                Vector3 worldPt = t.TransformPoint(localvertice[i]);
+                combineVertices.Add(worldPt);
+
+                min = Vector3.Min(worldPt, min);
+                max = Vector3.Max(worldPt, max);
+            }
+            for (int i = 0; i < localTris.Length; i++)
+            {
+                combinedIndices.Add(localTris[i] + vertexOffset);
+            }
+            vertexOffset += localvertice.Length;
+        }
+        if (combinedIndices.Count == 0)
+        {
+            UnityEngine.Debug.LogWarning("No static meshes found to build Octree.");
+            return;
+        }
+
+        Bounds totalbounds = new Bounds();
+        totalbounds.SetMinMax(min, max);
+
+        BuildTreeFromData(combineVertices.ToArray(), combinedIndices.ToArray(), totalbounds, maxDepth, minSize);
+    }
+
+    private void BuildTreeFromData(Vector3[] vertices, int[] triangles, Bounds totalbounds, int maxDepth, float minSize)
+    {
+        this.worldBounds = totalbounds;
         this.MaxDepth = maxDepth;
         this.MinNodeSize = minSize;
+        this.cacheVertices = vertices;
+        this.cachedTriangles = triangles;
 
         octreenodes.Clear();
-        rootIndex = BuildNode(bounds.center, bounds.extents.x, 0, obstacleMask);
+
+        List<int> alltris = new List<int>();
+        for (int i = 0; i < cachedTriangles.Length / 3; i++)
+        {
+            alltris.Add(i);
+        }
+        float a = MathF.Max(worldBounds.extents.x, worldBounds.extents.y);
+        float maxsize = MathF.Max(a, worldBounds.extents.z);
+       // Debug.Log(maxsize);
+
+        rootIndex = BuildNode(worldBounds.center, 128, 0, alltris);
+        Debug.Log($"Octree Built. Nodes: {octreenodes.Count}, Triangles: {cachedTriangles.Length / 3}");
     }
-    public void TryMergeChildren(int nodeIndex)
+    public Vector3Int MulAndFloorVector3(Vector3 a, float m)
     {
-        Octreenode node = octreenodes[nodeIndex];
-        if(node.isLeaf) return;
-
-        Octreenode.NodeState? commonstate = null;
-
-        for(int i=0;i<8; i++)
-        {
-            if (node.ChildIndicces[i]<0) continue;
-
-            Octreenode child = octreenodes[node.ChildIndicces[i]];
-            //有非叶子节点的情况，肯定不能合并。
-            if (!child.isLeaf) return;
-            //第一个的到时候给state赋值
-            if (commonstate == null)
-            {
-                commonstate = child.state;
-            }
-            //有很严格的存在任意不同的状态的情况，则不能合并，只有所有节点状态相同才行
-            else if (commonstate != child.state)
-            {
-                return;
-            }
-            if (commonstate.HasValue)
-            {
-                node.isLeaf = true;
-                node.state = commonstate.Value;
-                node.ChildIndicces = new int[8] { -1,-1,-1,-1,-1,-1,-1,-1};
-                octreenodes[nodeIndex] = node;
-            }
-        }
+        Vector3Int v = Vector3Int.FloorToInt(a * m);
+        return v;
     }
-    public int BuildNode(Vector3 center, float halfsize, int depth, LayerMask layerMask)
+    public static Octreenode FindNodeXYZ(OctreeAsset data, Vector3 xyz)
     {
-        Octreenode node = new Octreenode { center = center, halfSize = halfsize, ChildIndicces = new int[8] { -1, -1, -1, -1, -1, -1, -1, -1 } };
-        Bounds bounds = node.GetBounds();
-
-        bool hasAnyObstacle = Physics.CheckBox(center, Vector3.one * halfsize * 0.99f,Quaternion.identity, layerMask);
-
-        if (!hasAnyObstacle)
+        xyz.x /= data.MinSize;
+        xyz.y /= data.MinSize;
+        xyz.z /= data.MinSize;
+        Vector3Int V3int = Vector3Int.FloorToInt(xyz);
+        if ((data.nodeDic.TryGetValue(V3int, out int index)))
         {
-            node.isLeaf = true;
-            node.state = Octreenode.NodeState.Empty;
-            octreenodes.Add(node);
-            return octreenodes.Count-1;
+            return data.octreenodes[index];
         }
-        bool isFullyBlock = IsFullyblock(bounds, layerMask);
-        if (isFullyBlock)
+        return null;
+    }
+    public static bool FindNodeFirst(OctreeAsset data,Vector3 pos,Vector3 raydir,float dis)
+    {
+        float f = 0;
+        Vector3 p = pos;
+        while (f<dis)
         {
-            node.isLeaf = true;
-            node.state = Octreenode.NodeState.Blocked;
-            octreenodes.Add(node);
-            return octreenodes.Count-1;
-        }
-        if (depth >= MaxDepth || halfsize * 2f <= MinNodeSize)
-        {
-            node.isLeaf = true;
-            node.state = Octreenode.NodeState.Blocked;
-            octreenodes.Add(node);
-            return octreenodes.Count - 1;
-        }
-        //继续细分
-        node.isLeaf = false;
-        node.state = Octreenode.NodeState.Mixed;
-
-        int nodeindex = octreenodes.Count;
-        octreenodes.Add(node);
-
-        float childHalfSize = halfsize * 0.5f;
-        int childIdx = 0;
-        for(int x = -1; x <= 1; x += 2)
-        {
-            for(int y = -1; y <= 1; y += 2)
+            p += raydir * f;
+            Vector3Int V3int = Vector3Int.FloorToInt(p);
+            if (data.nodeDic.TryGetValue(V3int,out int index))
             {
-                for (int z = -1; z <= 1; z += 2)
+                return true;
+            }
+            f += data.MinSize;
+
+        }
+        return false;
+    }
+    public static float FindNodeAxis(OctreeAsset data,Vector3 pos, Vector3 raydir, float minrange, float maxrange,float thresold)
+    {
+        float dis = 0;
+        for (float f = minrange; f < maxrange + data.MinSize; f += data.MinSize)
+        {
+            Vector3 p = pos + raydir * f;
+            Vector3Int V3int = Vector3Int.FloorToInt(p);
+            if ((data.nodeDic.TryGetValue(V3int, out int index)))
+            {
+
+                  dis = data.octreenodes[index].center.y;
+                if (dis > thresold)
                 {
-                    Vector3 childCenter = center+new Vector3(x* childHalfSize, y * childHalfSize, z * childHalfSize);
-
-                    int childNodeIndex = BuildNode(childCenter, childHalfSize, depth + 1, layerMask);
-                    node.ChildIndicces[childIdx] = childNodeIndex;
-                    childIdx++;
+                    return 99999999999f;
                 }
             }
         }
+        return dis;
+    }
+    private int BuildNode(Vector3 center, float halfsize, int depth, List<int> alltris)
+    {
+        Bounds nodeBounds = new Bounds(center, Vector3.one * halfsize * 2);
 
-        octreenodes[nodeindex] = node;
-        return nodeindex;
+        List<int> intersectingTriangles = new List<int>();
+        foreach (int triIdx in alltris)
+        {
+            if (IsTriangleInAABB(triIdx, nodeBounds))
+            {
+                intersectingTriangles.Add(triIdx);
+            }
+        }
+
+        if (intersectingTriangles.Count == 0)
+        {
+            return -1;
+        }
+
+        // 修复：确保判断条件符合你的预期
+        bool shouldBeLeaf = (halfsize * 2f <= MinNodeSize) || (depth >= MaxDepth);
+
+        if (shouldBeLeaf)
+        {
+            var leaf = new Octreenode
+            {
+                center = center,
+                halfSize = halfsize,
+                isLeaf = true,
+                ChildIndices = new int[] { -1, -1, -1, -1, -1, -1, -1, -1 },
+                triangleIndices = intersectingTriangles
+            };
+           // Debug.Log($"add cemter{Quantize(leaf.center)},halfsize:{halfsize}");
+            int nodeIdx = octreenodes.Count;
+            octreenodes.Add(leaf);
+            nodeDic[Quantize(leaf.center)] = nodeIdx;
+            return nodeIdx;
+        }
+
+        var branch = new Octreenode
+        {
+            center = center,
+            halfSize = halfsize,
+            isLeaf = false,
+            ChildIndices = new int[] { -1, -1, -1, -1, -1, -1, -1, -1 }
+        };
+
+        float childHalf = halfsize * 0.5f;
+        bool hasChild = false;
+
+        // 修复：按照 GetChildIdx 的位顺序遍历 (z, y, x)
+        for (int i = 0; i < 8; i++)
+        {
+            int zSign = (i & 1) == 0 ? -1 : 1;
+            int ySign = (i & 2) == 0 ? -1 : 1;
+            int xSign = (i & 4) == 0 ? -1 : 1;
+
+            Vector3 newCenter = center + new Vector3(childHalf * xSign, childHalf * ySign, childHalf * zSign);
+            int childIdx = BuildNode(newCenter, childHalf, depth + 1, intersectingTriangles);
+
+            branch.ChildIndices[i] = childIdx;
+            if (childIdx != -1) hasChild = true;
+        }
+
+        if (!hasChild) return -1;
+
+        int branchIdx = octreenodes.Count;
+        octreenodes.Add(branch);
+        return branchIdx;
     }
 
-    private bool IsFullyblock(Bounds bounds, LayerMask layerMask)
+    private bool IsTriangleInAABB(int triIdx, Bounds nodeBounds)
     {
-        //bound是一个立方体，这里就是将立方体的八个端点作为采样点，用Physics.CheckSphere采样以采样点位中心半径为0.01f的球形区域是否有遮挡，如果有一个点没有被遮挡，则没有被完全遮挡
-        Vector3[] SamplePoints = new Vector3[]
-        {bounds.center,
-        bounds.center+new Vector3(bounds.extents.x,0,0)*0.9f,
-        bounds.center-new Vector3(bounds.extents.x,0,0)*0.9f,
-        bounds.center+new Vector3(0,bounds.extents.y,0)*0.9f,
-        bounds.center-new Vector3(0,bounds.extents.y,0)*0.9f,
-        bounds.center+new Vector3(0,0,bounds.extents.z)*0.9f,
-        bounds.center-new Vector3(0,0,bounds.extents.z)*0.9f,
+        Vector3 vertice1 = cacheVertices[cachedTriangles[triIdx * 3]];
+        Vector3 vertice2 = cacheVertices[cachedTriangles[triIdx * 3 + 1]];
+        Vector3 vertice3 = cacheVertices[cachedTriangles[triIdx * 3 + 2]];
 
-        };
-        foreach (Vector3 point in SamplePoints)
-        {
-            if (!Physics.CheckSphere(point, 0.01f, layerMask))return false;
-        }
+        float minX = Mathf.Min(vertice1.x, Mathf.Min(vertice2.x, vertice3.x));
+        float maxX = Mathf.Max(vertice1.x, Mathf.Max(vertice2.x, vertice3.x));
+        if (minX > nodeBounds.max.x || maxX < nodeBounds.min.x) return false;
+        float minY = Mathf.Min(vertice1.y, Mathf.Min(vertice2.y, vertice3.y));
+        float maxY = Mathf.Max(vertice1.y, Mathf.Max(vertice2.y, vertice3.y));
+        if (minY > nodeBounds.max.y || maxY < nodeBounds.min.y) return false;
+        float minZ = Mathf.Min(vertice1.z, Mathf.Min(vertice2.z, vertice3.z));
+        float maxZ = Mathf.Max(vertice1.z, Mathf.Max(vertice2.z, vertice3.z));
+        if (minZ > nodeBounds.max.z || maxZ < nodeBounds.min.z) return false;
+
         return true;
     }
-    public bool IsWalkable(Vector3 point)
+    public Octreenode GetLeafNode(Vector3 pos, int index)
     {
-        if(!worldBounds.Contains(point))
-        return false;
-
-        return IsWalkableRecursive(rootIndex, point);
+        if (index < 0 || index > octreenodes.Count) return null;
+        Octreenode node = octreenodes[index];
+        if (node.isLeaf) return node;
+        int ChildIdx = GetChildIdx(node.center, pos);
+        int ChildNodeIdx = node.ChildIndices[ChildIdx];
+        if (ChildNodeIdx < 0) return node;
+        return GetLeafNode(pos, ChildNodeIdx);
     }
-
-    private bool IsWalkableRecursive(int ind, Vector3 point)
+    public Octreenode GetLeafNode(Vector3 pos)
     {
-        if(ind<0||ind>=octreenodes.Count) return false;
-
-        Octreenode node=octreenodes[ind];
-
-        if (node.isLeaf)
-        {
-            return node.state == Octreenode.NodeState.Empty;
-        }
-        int childidx = GetChildIndex(node.center,point);
-        int chilNodeidx = node.ChildIndicces[childidx];
-
-        if(chilNodeidx<0) return true;
-
-        return IsWalkableRecursive(chilNodeidx, point);
-
+        return GetLeafNode(pos, rootIndex);
     }
-    int GetChildIndex(Vector3 center,Vector3 point)
+    int GetChildIdx(Vector3 center, Vector3 point)
     {
         int index = 0;
         if (point.z > center.z) index |= 1;
-        if(point.y > center.y) index |= 2;
-        if(point.x > center.x) index |= 4;
+        if (point.y > center.y) index |= 2;
+        if (point.x > center.x) index |= 4;
         return index;
     }
-    public Octreenode GetLeafNode(Vector3 point)
-    {
-        if (!worldBounds.Contains(point))
-        {
-            return null;
-        }
-        return GetLeafNodeRecursive(rootIndex,point);
-    }
 
-    private Octreenode GetLeafNodeRecursive(int index,Vector3 point)
-    {
-        if(index <0) return null;
-        
-        Octreenode node = octreenodes[index];
-        if(node.isLeaf) {return node;}
-        int childidx = GetChildIndex(node.center, point);
-        return GetLeafNodeRecursive(node.ChildIndicces[childidx],point);
-    }
-    //查找临近节点可通行
-    public List<Octreenode> getWalkableNeighbors(Octreenode node)
-    {
-        List<Octreenode> neighbors = new List<Octreenode>();
-        float step = node.halfSize * 2;
 
-        Vector3[] directions = new Vector3[]
-        {
-            Vector3.right,Vector3.left,Vector3.up,Vector3.down,Vector3.forward,Vector3.back
-        };
-        foreach(var dir in directions)
-        {
-            Vector3 neipos = node.center+ dir * step;
-            Octreenode neibor = GetLeafNode(neipos);
-
-            if(neibor!=null&&neibor.state == Octreenode.NodeState.Empty)
-            {
-                neighbors.Add(neibor);
-            }
-        }
-        Vector3[] edgeDirections = new Vector3[]
-        { 
-            new Vector3(1,1,0),new Vector3(1,-1,0),new Vector3(-1,1,0),new Vector3(-1,-1,0),
-            new Vector3(1,0,1),new Vector3(1,0,-1),new Vector3(-1,0,1),new Vector3(-1,0,-1),
-            new Vector3(0,1,1),new Vector3(0,1,-1),new Vector3(0,-1,1),new Vector3(0,-1,-1),
-        };
-
-        foreach (var dir in edgeDirections)
-        {
-            Vector3 neipos = node.center + dir * step;
-            Octreenode neibor = GetLeafNode(neipos);
-            if (neibor != null && neibor.state == Octreenode.NodeState.Empty)
-            {
-                neighbors.Add(neibor);
-            }
-        }
-
-        return neighbors;
-        }
-    private bool IsDiagonalMoveVaild(Vector3 from,Vector3 to) 
+    public void DrawGizmos()
     {
-        Vector3 dir = to - from;
-        return !Physics.Raycast(from, dir.normalized,dir.magnitude);
-    }
-    public void DrawGizmos(bool showEmpty = false,bool showBlocked = true)
-    {
-        foreach(var node in octreenodes)
+        if (octreenodes == null) return;
+        foreach (var node in octreenodes)
         {
             if (!node.isLeaf) continue;
-
-            if(node.state == Octreenode.NodeState.Blocked && showBlocked)
+            if (node.triangleIndices != null && node.triangleIndices.Count > 0)
             {
-                Gizmos.color = new Color(1,0,0,0.3f);
-                Gizmos.DrawCube(node.center, Vector3.one * node.halfSize * 2f);
-
-            }
-            else if(node.state == Octreenode.NodeState.Empty && showEmpty)
-            {
-                Gizmos.color = new Color(0, 1, 0, 0.1f);
-                Gizmos.DrawCube(node.center, Vector3.one * node.halfSize * 2);
+                Gizmos.color = new Color(0, 1, 0, 0.3f);
+                Gizmos.DrawWireCube(node.center, Vector3.one * node.halfSize * 2f);
             }
         }
+
+    }
+  Vector3Int Quantize(Vector3 position)
+{
+    const float epsilon = 1e-4f;
+    return Vector3Int.FloorToInt((position / MinNodeSize) + new Vector3(epsilon, epsilon, epsilon));
+}
+
+public void DrawGizmospos(Vector3Int position)
+{
+  
+    Gizmos.color = new Color(0, 1, 0, 0.3f);
+        var p = Quantize(position);
+        if(nodeDic.TryGetValue(p,out int nodeidx))
+        {
+        Gizmos.DrawSphere(octreenodes[nodeidx].center,50f);
+        }
+        else
+        {
+            Debug.Log($"当前位置{position}未找到对应的节点");
+        }
+    }
+
+    public void Check()
+    {
+        foreach (var kv in nodeDic)
+        {
+            int idx = kv.Value;
+            if (idx < 0 || idx >= octreenodes.Count)
+                Debug.LogError($"Bad index in nodeDic: {idx}, key = {kv.Key}");
+        }
+        for (int i = 0; i < octreenodes.Count; i++)
+        {
+            var n = octreenodes[i];
+            var key = Vector3Int.FloorToInt(n.center / MinNodeSize);
+            if (!nodeDic.TryGetValue(key, out int idx) || idx != i)
+                Debug.LogError($"Mismatch: node {i} -> key {key} -> idx {idx}");
+        }
+    }
+    public void DebugLeafNodes()
+    {
+        int leafCount = 0;
+        foreach (var node in octreenodes)
+        {
+            if (!node.isLeaf) continue;
+            leafCount++;
+
+            float nodeFullSize = node.halfSize * 2f;
+            Vector3Int key = Quantize(node.center);
+
+            Debug.Log($"Leaf: center={node.center}, halfSize={node.halfSize}, fullSize={nodeFullSize}, key={key}");
+
+            if (leafCount > 10) break; // 只看前10个
+        }
+
+        Debug.Log($"MinNodeSize={MinNodeSize}, Total leaves={leafCount}");
     }
 }
 

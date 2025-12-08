@@ -2,6 +2,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using UnityEditor;
 using UnityEngine;
 
@@ -40,10 +41,9 @@ public class BakerEditor : Editor
 
         EditorGUILayout.Space(10);
 
-        if (GUILayout.Button("自动计算边界"))
+        if (GUILayout.Button("保存"))
         {
-            CalculateBoundsFromColliders(baker);
-            EditorUtility.SetDirty(baker);
+            OctreeSerializer.SaveAsset(baker.octree, new string($"Assets/PhysicalCache/{baker.name}.asset"));
         }
     }
 

@@ -7,7 +7,7 @@ public class PathFinderTest : MonoBehaviour
     public Baker baker;
     public Transform targetPoint;
 
-    private JPathFinder finder;
+   // private JPathFinder finder;
     private List<Vector3> currentPath;
     // Start is called before the first frame update
     void Start()
@@ -16,11 +16,11 @@ public class PathFinderTest : MonoBehaviour
 
         if (baker.octree != null)
         {
-            finder = new JPathFinder(baker.octree);
+          //  finder = new JPathFinder(baker.octree);
         }
 
 
-            currentPath = finder.FindPath(transform.position, targetPoint.position);
+           // currentPath = finder.FindPath(transform.position, targetPoint.position,false);
 
             if (currentPath != null)
             {
