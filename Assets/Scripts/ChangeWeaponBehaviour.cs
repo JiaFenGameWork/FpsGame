@@ -6,7 +6,9 @@ public class ChangeWeaponBehaviour : MonoBehaviour
     public GameObject ShouQiang;
     public GameObject PenZi;
     public GameObject ChongFenQiang;
-    private WeaponBehaviour weaponBehaviour;
+    public WeaponBehaviour ShouQiangWeaponBehaviour;
+    public WeaponBehaviour PenZiWeaponBehaviour;
+    public WeaponBehaviour chongFenQiangWeaponBehaviour;
 
     void Start()
     {
@@ -22,21 +24,21 @@ public class ChangeWeaponBehaviour : MonoBehaviour
             ShouQiang.SetActive(true);
             PenZi.SetActive(false);
             ChongFenQiang.SetActive(false);
-            weaponBehaviour.CurrentShootingMode = WeaponBehaviour.ShootingMode.Single;
+            ShouQiangWeaponBehaviour.CurrentShootingMode = WeaponBehaviour.ShootingMode.Single;
         }    
         else if (Input.GetKeyDown(KeyCode.Alpha2))
         {
             ShouQiang.SetActive(false);
             PenZi.SetActive(true);
             ChongFenQiang.SetActive(false);
-            weaponBehaviour.CurrentShootingMode = WeaponBehaviour.ShootingMode.Burst;
+            PenZiWeaponBehaviour.CurrentShootingMode = WeaponBehaviour.ShootingMode.Burst;
         }
         else if (Input.GetKeyDown(KeyCode.Alpha3))
         {
             ShouQiang.SetActive(false);
             PenZi.SetActive(false);
             ChongFenQiang.SetActive(true);
-            weaponBehaviour.CurrentShootingMode = WeaponBehaviour.ShootingMode.Auto;
+            chongFenQiangWeaponBehaviour.CurrentShootingMode = WeaponBehaviour.ShootingMode.Auto;
         }
     }
 }

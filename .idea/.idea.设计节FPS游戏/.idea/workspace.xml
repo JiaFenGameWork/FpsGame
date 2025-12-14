@@ -6,12 +6,9 @@
   <component name="ChangeListManager">
     <list default="true" id="b534d7fd-cbc0-4957-b00a-fd22e8d9d5ed" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/.idea.设计节FPS游戏/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.设计节FPS游戏/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/New Terrain.asset" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/New Terrain.asset" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Assets/Scenes/level1.unity" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scenes/level1.unity" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Sci-Fi Styled Modular Pack/Example scenes/Materials/Sand.mat" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Sci-Fi Styled Modular Pack/Example scenes/Materials/Sand.mat" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Sci-Fi Styled Modular Pack/Example scenes/Materials/Snow.mat" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Sci-Fi Styled Modular Pack/Example scenes/Materials/Snow.mat" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Sci-Fi Styled Modular Pack/Models/Materials/No Name.mat" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Sci-Fi Styled Modular Pack/Models/Materials/No Name.mat" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Sci-Fi Styled Modular Pack/Models/Materials/base color.mat" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Sci-Fi Styled Modular Pack/Models/Materials/base color.mat" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Assets/Scripts/ChangeWeaponBehaviour.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/ChangeWeaponBehaviour.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Enemy/Enemybase.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/Enemy/Enemybase.cs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -90,6 +87,7 @@
     "node.js.selected.package.eslint": "(autodetect)",
     "node.js.selected.package.tslint": "(autodetect)",
     "nodejs_package_manager_path": "npm",
+    "settings.editor.selected.configurable": "preferences.pluginManager",
     "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
@@ -151,7 +149,8 @@
       <workItem from="1764166082091" duration="128000" />
       <workItem from="1764509519660" duration="95000" />
       <workItem from="1764593651101" duration="1285000" />
-      <workItem from="1765684500253" duration="5300000" />
+      <workItem from="1765684500253" duration="7989000" />
+      <workItem from="1765696187204" duration="774000" />
     </task>
     <task id="LOCAL-00001" summary="First commit">
       <option name="closed" value="true" />
