@@ -4,6 +4,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
+using UnityEditor.VersionControl;
 using UnityEngine;
 
 [CustomEditor(typeof(Baker))]
@@ -33,44 +34,23 @@ public class BakerEditor : Editor
 
         EditorGUILayout.EndHorizontal();
 
-        if (baker.octree != null)
-        {
-            EditorGUILayout.Space(5);
-            EditorGUILayout.HelpBox($"节点数量: {baker.octree.NodeCount}", MessageType.Info);
-        }
 
         EditorGUILayout.Space(10);
 
         if (GUILayout.Button("保存"))
         {
-            OctreeSerializer.SaveAsset(baker.octree, new string($"Assets/PhysicalCache/{baker.name}.asset"));
+            NavMeshAsset asset = ScriptableObject.CreateInstance<NavMeshAsset>();
+            asset.cells = baker.nav.Cells;
+            asset.cellSize = baker.nav.CellSize;
+            asset.bounds = baker.nav.WorldBounds;
+            string path = new string($"Assets/PhysicalCache/{baker.name}.asset");
+            AssetDatabase.CreateAsset(asset, path);
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+            
         }
     }
 
-    private void CalculateBoundsFromColliders(Baker baker)
-    {
-        Collider[] allColliders = FindObjectsOfType<Collider>();
-
-        if (allColliders.Length == 0)
-        {
-            Debug.LogWarning("场景中没有找到 Collider");
-            return;
-        }
-
-        Bounds totalBounds = allColliders[0].bounds;
-
-        foreach (var col in allColliders)
-        {
-            totalBounds.Encapsulate(col.bounds);
-        }
-
-        // 稍微扩大一点
-        totalBounds.Expand(2f);
-
-        baker.boundsCenter = totalBounds.center;
-        baker.boundSize = totalBounds.size;
-
-        Debug.Log($"边界已更新: 中心 {totalBounds.center}, 尺寸 {totalBounds.size}");
-    }
+  
 }
 #endif

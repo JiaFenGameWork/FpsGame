@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -15,7 +16,7 @@ public class PatrolState : IState
     private int currentPathIndex = 0;
 
     // 移动参数
-    private float moveSpeed = 3f;
+    public float moveSpeed = 3f;
     private float arrivalThreshold = 0.5f;
     private float patrolPointThreshold = 1f;
 
@@ -24,21 +25,29 @@ public class PatrolState : IState
     private bool isWaiting = false;
     private float waitTimer = 0f;
     private float waitDuration = 2f;
+    static int walkHash = Animator.StringToHash("anim_Walk_Loop");
+    static int idleHash = Animator.StringToHash("anim_Idle_Loop_S");
+    private bool _isPathPending = false;
+    private bool _active = false;
+    private int _pathRequestId = 0;
+    private Animator _animator;
 
-    public PatrolState(EnemyController controller, float speed = 3f)
+    public PatrolState(EnemyController controller, Animator ani,float speed = 3f)
     {
         this.enemyController = controller;
         this.moveSpeed = speed;
+        this._animator = ani;
     }
 
     public void OnEnter()
     {
-        if (enemyController.octree == null)
+        if (enemyController.nav == null)
         {
             Debug.LogError("你需要用Baker烘焙一个octree，然后拖入");
             return;
         }
-
+        _animator.CrossFade(idleHash, 0.1f);
+        _active = true;
         // 寻找最近的巡逻点作为起始目标
         currentPatrolIndex = FindNearestPatrolPointIndex();
 
@@ -51,13 +60,17 @@ public class PatrolState : IState
         isMoving = false;
         isWaiting = false;
         currentPath = null;
+        _active = false;
+        if (_isPathPending) enemyController.CancelPathRequest(_pathRequestId);
+        _isPathPending = false;
     }
 
     public void Tick()
     {
         if (enemyController.PatrolPoints == null || enemyController.PatrolPoints.Length == 0)
             return;
-
+        if (_isPathPending)
+            return;
         // 等待状态
         if (isWaiting)
         {
@@ -125,41 +138,65 @@ public class PatrolState : IState
         isMoving = false;
         isWaiting = true;
         waitTimer = 0f;
+        _animator.CrossFade(idleHash, 0.1f);
         Debug.Log($"到达巡逻点 {currentPatrolIndex}");
     }
 
     private void MoveToNextPatrolPoint()
     {
         currentPatrolIndex = (currentPatrolIndex + 1) % enemyController.PatrolPoints.Length;
+
         CalculatePathToCurrentPatrolPoint();
 
     }
 
     private void CalculatePathToCurrentPatrolPoint()
     {
+        if(!_active) return;
         if (enemyController.PatrolPoints.Length == 0) return;
 
         Vector3 start = enemyController.transform.position;
         Vector3 end = enemyController.PatrolPoints[currentPatrolIndex].position;
-
-        // --- 核心改动：调用寻路器 ---
-        currentPath = enemyController.finder.FindPath(start, end);
-        if (currentPath != null && currentPath.Count > 0)
+        //Debug.Log($"计算从{start}到{end}的路径");
+        if (_isPathPending)
         {
+            enemyController.CancelPathRequest(_pathRequestId);
+            _isPathPending = false;
+        }
+        isMoving = false;
+        currentPath = null;
+        currentPathIndex = 0;
+
+        _isPathPending = true;
+
+        _pathRequestId= enemyController.RequestPathAsync(start, end, callback);
+        // --- 核心改动：调用寻路器 ---
+        
+    }
+    public void callback(int id,List<Vector3> path)
+    {
+        if(!_active)return;
+        if (id != _pathRequestId) return;
+        _animator.CrossFade(walkHash, 0.1f);
+        _isPathPending = false;
+        if(path != null && path.Count > 0)
+        {
+            currentPath = path;
             currentPathIndex = 0;
-            isMoving = true;
+            isMoving=true;
+            isWaiting = false;
+            waitTimer = 0f;
             Debug.Log($"路径计算成功: 点数 {currentPath.Count}");
         }
         else
         {
-            Debug.LogWarning($"无法找到从{start}到{end}的路径: {currentPatrolIndex}，尝试下一个点");
             // 找不到路径时，稍微等待一下再试下一个，防止死循环卡死帧率
             isWaiting = true;
             waitTimer = 0.5f;
             currentPatrolIndex = (currentPatrolIndex + 1) % enemyController.PatrolPoints.Length;
+            Debug.Log("找不到啊");
         }
     }
-
     private int FindNearestPatrolPointIndex()
     {
         if (enemyController.PatrolPoints == null || enemyController.PatrolPoints.Length == 0)

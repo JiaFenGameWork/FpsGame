@@ -1,18 +1,13 @@
 using System.Collections;
 using System.Collections.Generic;
+using UnityEditor.Build.Content;
 using UnityEngine;
 
 public class Baker : MonoBehaviour
 {
     [Header("BakeSetting")]
-    public Vector3 boundsCenter;
-    public Vector3 boundSize = new Vector3(100,50,100);
-    public int maxDepth = 6;
-    public float minNodeSize = 0.1f;
-    public LayerMask obstacleMask = ~0;
-    public Vector3Int testint = new Vector3Int();
-    public SparseOctree octree;
-
+    public NavigationGrid nav;
+    public NavigationGrid.BuildSettings settings;
     [Header("文件名")]
     public string name;
     public bool showgizmos= true;
@@ -21,35 +16,29 @@ public class Baker : MonoBehaviour
 
     public void Bake()
     {
-        obstacleMask = LayerMask.GetMask("Obstacle");
-        Bounds bounds = new Bounds(boundsCenter, boundSize);
-        octree = new SparseOctree();
+        nav = new NavigationGrid();
 
 
         System.Diagnostics.Stopwatch sw= System.Diagnostics.Stopwatch.StartNew();
-        octree.BuildTreeFromStatics(maxDepth, minNodeSize);
+        nav.Build(settings);
         sw.Stop();
-        Debug.Log($"烘焙完成: {octree.NodeCount} 节点, 耗时 {sw.ElapsedMilliseconds}ms");
-        octree.DebugLeafNodes();
     }
     public void Clear()
     {
-        octree = null;
+        nav = null;
     }
     private void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.yellow;
-        Gizmos.DrawWireCube(boundsCenter, boundSize);
+       // Gizmos.DrawWireCube();
 
-        if ( octree != null)
+        if ( nav != null)
         {
-            octree.DrawGizmos();
+            nav.DrawGizmos(true);
           //  foreach(var key in octree.NodeDic.Keys)
             {
           //      Debug.Log(key);
             }
-      octree.DrawGizmospos(testint);
-           // octree.DrawGizmosDicKey();
         }
     }
 }

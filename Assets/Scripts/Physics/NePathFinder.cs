@@ -1,246 +1,423 @@
+using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Unity.VisualScripting;
 using UnityEngine;
+using static NavigationGrid; // 引用你的 NavCell 定义
 
 public class NePathFinder
 {
-    private OctreeAsset _octree;
-
-    // 高度差代价系数：高度差越大，代价越高
-    public float _heightCostMultiplier = 2.0f;
-
-    // 最大可通行高度差：超过此值视为不可通行（用于阻挡高墙）
-    public float _maxTraversableHeight = 1.5f;
-
-    // 最大可跨越的单步高度差（用于台阶/斜坡判断）
-    public float _maxStepHeight = 0.5f;
-    public float CharacterHeight = 0f;
-    public List<Vector3> debugPathPoints = new List<Vector3>();
-
-
-    public NePathFinder(OctreeAsset octree, float hcost, float characterHeight ,float maxTraversableHeight = 1.5f, float maxStepHeight = 0.5f)
+    private Terrain terrain;
+    private readonly NavMeshAsset _nav;
+    private readonly float _maxStepHeight; // 最大上坡高度
+    private readonly float _maxDropHeight; // 最大下坡高度
+    private readonly float _cellSize;
+    public DebugContext LastDebugData;
+    public class DebugContext
     {
-        _octree = octree;
-        _heightCostMultiplier = hcost;
-        _maxTraversableHeight = maxTraversableHeight;
-        _maxStepHeight = maxStepHeight;
-        CharacterHeight = characterHeight;
+        public List<PathNode> VisitedNodes = new List<PathNode>(); // 已经搜索过的点 (ClosedSet)
+        public List<Vector3> FailedEdges = new List<Vector3>();    // 尝试过但失败的边（用于画线）
+        public Vector3 StartSnapPos;
+        public Vector3 EndSnapPos;
+        public string FailureReason;
     }
-
-    public class PathNode
+    // 节点类，实现堆接口
+    public class PathNode : IHeapItem<PathNode>
     {
         public Vector3Int GridIndex;
-        public Vector3 WorldPosition;
+        public Vector3 WorldPosition; // 缓存精确的世界坐标（包含 NavCell.height）
         public PathNode Parent;
+
         public float G;
         public float H;
         public float F => G + H;
 
-        public PathNode( Vector3 pos,float minSize)
-        {
+        public bool Closed; // 替代 ClosedSet HashSet，性能更高
+        int heapIndex;
 
-            WorldPosition = pos;
-            GridIndex = Vector3Int.RoundToInt(pos/ minSize);
+        public PathNode(Vector3Int gridIndex, Vector3 worldPos)
+        {
+            GridIndex = gridIndex;
+            WorldPosition = worldPos;
+        }
+
+        public int HeapIndex
+        {
+            get => heapIndex;
+            set => heapIndex = value;
+        }
+
+        public int CompareTo(PathNode other)
+        {
+            int compare = F.CompareTo(other.F);
+            if (compare == 0)
+            {
+                compare = H.CompareTo(other.H);
+            }
+            return -compare; // MinHeap 需要反转比较结果
         }
     }
-    Stopwatch swTotal = new Stopwatch();
-    Stopwatch swSort = new Stopwatch();
-    Stopwatch swGetNeighbors = new Stopwatch();
-    Stopwatch swMoveCost = new Stopwatch();
-    int sortCalls = 0;
-    int neighborCalls = 0;
-    int moveCostCalls = 0;
 
+    public NePathFinder(NavMeshAsset nav, Terrain terrain,float maxStepHeight = 0.6f, float maxDropHeight = 2.0f)
+    {
+        this.terrain = terrain;
+        _nav = nav;
+        _cellSize = nav.cellSize;
+        _maxStepHeight = maxStepHeight;
+        _maxDropHeight = maxDropHeight;
+    }
+
+    /// <summary>
+    /// 核心寻路方法
+    /// </summary>
     public List<Vector3> FindPath(Vector3 startPos, Vector3 targetPos)
     {
-        debugPathPoints.Clear();
-
-        if (SparseOctree.FindNodeXYZ(_octree,startPos) != null)
+        LastDebugData = new DebugContext();
+        // 1. 坐标转换与吸附
+        Vector3Int startGrid = WorldToGrid(startPos);
+        Vector3Int targetGrid = WorldToGrid(targetPos);
+        UnityEngine.Debug.Log("开始寻路");
+        // 如果仍无效，直接返回
+        if (!_nav.bounds.Contains(startGrid) || !_nav.bounds.Contains(targetGrid))
         {
-            UnityEngine.Debug.LogError("起点被node卡住啦");
+            UnityEngine.Debug.LogWarning("起点或终点在地图边界外");
+            return null;
         }
-        float arrivalThreshold = _octree.MinSize*3f;
-
-        List<PathNode> openList = new List<PathNode>();
+        if (IsBlocked(targetGrid)||IsBlocked(startGrid))
+        {
+            UnityEngine.Debug.LogWarning("起点和终点被阻挡");
+            return null;
+        }
+        // 2. 初始化数据结构
+        // 预估堆大小：格子总数的一小部分，或者硬编码一个足够大的数
+        MinHeap<PathNode> openSet = new MinHeap<PathNode>(2048);
         Dictionary<Vector3Int, PathNode> allNodes = new Dictionary<Vector3Int, PathNode>();
-        HashSet<Vector3Int> closedSet = new HashSet<Vector3Int>();
-        PathNode startPathNode = new PathNode(startPos,_octree.MinSize);
+        LastDebugData.StartSnapPos = startGrid;
+        LastDebugData.EndSnapPos = GetMixedWorldPos(targetGrid);
+        PathNode startNode = new PathNode(startGrid, GetCellWorldPos(startGrid));
+        startNode.G = 0;
+        startNode.H = Vector3.Distance(startNode.WorldPosition, targetPos);
 
-        //加进去
-        startPathNode.G = 0;
-        startPathNode.H = CalculateHeuristic(startPos, targetPos);
-        openList.Add(startPathNode);
-        allNodes[startPathNode.GridIndex] = startPathNode;
-        int maxIterations = 10000;
+        openSet.Add(startNode);
+        allNodes.Add(startGrid, startNode);
+
         int iterations = 0;
+        int maxIterations = 5000; // 防止死循环
 
-        swTotal.Start();
-        while (openList.Count > 0 && iterations < maxIterations)
+        while (openSet.Count > 0)
         {
             iterations++;
-            swSort.Start();
-            openList.Sort((a, b) => a.F.CompareTo(b.F));
-            swSort.Stop();
-            sortCalls++;
-            PathNode current = openList[0];
-            openList.RemoveAt(0);
+            if (iterations > maxIterations) break;
 
-            if (closedSet.Contains(current.GridIndex))
-                continue;
-
-            closedSet.Add(current.GridIndex);
-
-            // 使用距离判断到达终点
-            float distToTarget = Vector3.Distance(current.WorldPosition,targetPos);
-
-            if (distToTarget < 3f)
+            PathNode current = openSet.RemoveFirst();
+            current.Closed = true;
+            LastDebugData.VisitedNodes.Add(current);
+            // 到达判断 (使用 Grid 距离更稳定，或者用距离阈值)
+            if (current.GridIndex == targetGrid || Vector3.Distance(current.WorldPosition, targetPos) < _cellSize)
             {
-                List<Vector3> path = RetracePath(current, targetPos);
-                debugPathPoints = path;
-                swTotal.Stop();
-                UnityEngine.Debug.Log($"=== 寻路性能分析 ===\n" +
-       $"总耗时: {swTotal.ElapsedMilliseconds}ms\n" +
-       $"排序: {swSort.ElapsedMilliseconds}ms ({sortCalls}次) - {100.0 * swSort.ElapsedTicks / swTotal.ElapsedTicks:F1}%\n" +
-       $"获取邻居: {swGetNeighbors.ElapsedMilliseconds}ms ({neighborCalls}次) - {100.0 * swGetNeighbors.ElapsedTicks / swTotal.ElapsedTicks:F1}%\n" +
-       $"移动代价: {swMoveCost.ElapsedMilliseconds}ms ({moveCostCalls}次) - {100.0 * swMoveCost.ElapsedTicks / swTotal.ElapsedTicks:F1}%");
-                swTotal.Reset();
-                swGetNeighbors.Reset();
-                swMoveCost.Reset();
-                swSort.Reset(); 
-                return path;
+                return RetracePath(startNode, current, targetPos);
             }
 
-            var neighbors = GetNeighbors(current);
-
-            foreach (var neighbor in neighbors)
+            // 获取邻居
+            foreach (Vector3Int neighborGrid in GetNeighbors(current.GridIndex))
             {
-                if (closedSet.Contains(neighbor.GridIndex))
-                    continue;
-                swMoveCost.Start();
-                // 计算移动代价：水平距离 + 高度差惩罚
-
-                float costG = CalculateMovementCost(current.WorldPosition, neighbor.WorldPosition, 2);
-                if (costG >= 200000f)
+                // 如果是障碍物，直接跳过
+                if (_nav.cells.TryGetValue(neighborGrid, out NavCell cell))
                 {
+                    if (cell.flags == CellFlag.Blocked) continue;
+                }
+
+                // 2. 获取高度：如果格子存在用格子高度，不存在用 Terrain 高度
+                Vector3 neighborWorldPos = GetMixedWorldPos(neighborGrid);
+
+                // --- 核心修改结束 ---
+
+                // 3. 物理/高度检查
+                // 即使依靠物理系统，寻路也应该避免让角色走悬崖，否则物理系统会让角色卡住或滑落
+                float heightDiff = neighborWorldPos.y - current.WorldPosition.y;
+                bool isWalkable = true;
+                // 简单的坡度限制（可选：如果你希望完全由物理决定，可以注释掉这两行）
+                if (heightDiff > _maxStepHeight) isWalkable = false; // 太高爬不上去
+                if (heightDiff < -_maxDropHeight) isWalkable = false;// 太深不敢跳
+                if (!isWalkable)
+                {
+                    LastDebugData.FailedEdges.Add(current.WorldPosition);
+                    LastDebugData.FailedEdges.Add(neighborWorldPos);
                     continue;
                 }
-                float newG = current.G + costG;
-                swMoveCost.Stop(); moveCostCalls++;
-                if (allNodes.TryGetValue(neighbor.GridIndex, out PathNode existingNode))
-                {
-                    if (newG < existingNode.G)
-                    {
-                        existingNode.G = newG;
-                        existingNode.H = CalculateHeuristic(neighbor.WorldPosition, targetPos);
-                        existingNode.Parent = current;
-                        existingNode.WorldPosition = neighbor.WorldPosition;
 
-                        if (!openList.Contains(existingNode))
-                        {
-                            openList.Add(existingNode);
-                        }
-                    }
+                if (!allNodes.TryGetValue(neighborGrid, out PathNode neighborNode))
+                {
+                    neighborNode = new PathNode(neighborGrid, neighborWorldPos);
+                    allNodes[neighborGrid] = neighborNode;
                 }
-                else
-                {
-                    neighbor.G = newG;
-                    neighbor.H = CalculateHeuristic(neighbor.WorldPosition, targetPos);
-                    neighbor.Parent = current;
 
-                    openList.Add(neighbor);
-                    allNodes[neighbor.GridIndex] = neighbor;
+                if (neighborNode.Closed) continue;
+
+                float distanceCost = Vector3.Distance(current.WorldPosition, neighborWorldPos);
+                float newG = current.G + distanceCost;
+
+                if (newG < neighborNode.G || !openSet.Contains(neighborNode))
+                {
+                    neighborNode.G = newG;
+                    neighborNode.H = Vector3.Distance(neighborWorldPos, targetPos);
+                    neighborNode.Parent = current;
+
+                    if (!openSet.Contains(neighborNode))
+                        openSet.Add(neighborNode);
+                    else
+                        openSet.UpdateItem(neighborNode);
                 }
             }
         }
+        if (string.IsNullOrEmpty(LastDebugData.FailureReason))
+            LastDebugData.FailureReason = "OpenSet Empty (无路可走)";
 
-        UnityEngine.Debug.LogWarning($"未找到路径! 迭代次数: {iterations}");
-        return null;
-    }
-    private float CalculateHeuristic(Vector3 from, Vector3 to)
-    {
-        float distance = Vector3.Distance(from, to);
-
-        return distance; 
+        UnityEngine.Debug.LogError($"Pathfinding Failed: {LastDebugData.FailureReason}. Visited Nodes: {LastDebugData.VisitedNodes.Count}");
+        return null; // 没找到路径
     }
 
-    /// <summary>
-    /// 计算实际移动代价 G：水平距离 + 高度差代价（包含坡度惩罚）
-    /// </summary>
-    private float CalculateMovementCost(Vector3 from, Vector3 to,float threshold)
+    public IEnumerator FindPathAsy(Vector3 startPos, Vector3 targetPos, Action<List<Vector3>> ondone)
     {
-        // 1. 基础物理距离 (走斜边)
-        float distance = Vector3.Distance(from, to);
-        float height =  SparseOctree.FindNodeAxis(_octree, to, Vector3.up, 0, 3,2);
 
-        float cost = distance+height;
+        LastDebugData = new DebugContext();
+        // 1. 坐标转换与吸附
+        Vector3Int startGrid = WorldToGrid(startPos);
+        Vector3Int targetGrid = WorldToGrid(targetPos);
 
-        return cost;
-    }
-
-
-    /// <summary>
-    /// 获取邻居节点 - 加入高度差限制和路径可通行性检测
-    /// </summary>
-    private List<PathNode> GetNeighbors(PathNode current)
-    {
-        List<PathNode> neighbors = new List<PathNode>();
-        float halfsize = _octree.MinSize/2f;
-        Vector3 currentPos = current.WorldPosition;
-
-        // 8个方向：4个正方向 + 4个对角线方向
-        Vector3[] directions = {
-            Vector3.forward,
-            Vector3.back,
-            Vector3.left,
-            Vector3.right,
-            new Vector3(1, 0, 1).normalized,   // 右前
-            new Vector3(-1, 0, 1).normalized,  // 左前
-            new Vector3(1, 0, -1).normalized,  // 右后
-            new Vector3(-1, 0, -1).normalized  // 左后
-        };
-
-        foreach (var dir in directions)
+        // 如果仍无效，直接返回
+        if (!_nav.bounds.Contains(startGrid) || !_nav.bounds.Contains(targetGrid))
         {
-            float Distance = _octree.MinSize + 0.1f;
+            UnityEngine.Debug.LogWarning("起点或终点在地图边界外");
+            ondone?.Invoke(null);
+            yield break;
+        }
+        if (IsBlocked(targetGrid) || IsBlocked(startGrid))
+        {
+            UnityEngine.Debug.LogWarning("起点和终点被阻挡");
+            ondone?.Invoke(null);
+            yield break;
+        }
 
-            // 对角线方向需要更长的探测距离
-            if (Mathf.Abs(dir.x) > 0.5f && Mathf.Abs(dir.z) > 0.5f)
+        // 2. 初始化数据结构
+        // 预估堆大小：格子总数的一小部分，或者硬编码一个足够大的数
+        MinHeap<PathNode> openSet = new MinHeap<PathNode>(2048);
+        Dictionary<Vector3Int, PathNode> allNodes = new Dictionary<Vector3Int, PathNode>();
+        LastDebugData.StartSnapPos = startGrid;
+        LastDebugData.EndSnapPos = GetMixedWorldPos(targetGrid);
+        PathNode startNode = new PathNode(startGrid, GetCellWorldPos(startGrid));
+        startNode.G = 0;
+        startNode.H = Vector3.Distance(startNode.WorldPosition, targetPos);
+
+        openSet.Add(startNode);
+        allNodes.Add(startGrid, startNode);
+
+        int iterations = 0;
+        int maxIterations = 5000; // 防止死循环
+        int slice = 0;
+        while (openSet.Count > 0)
+        {
+            iterations++;
+            if (iterations > maxIterations)
             {
-                Distance *= 1.414f; // sqrt(2)
+                ondone?.Invoke(null);
+                yield break;
+            }
+            PathNode current = openSet.RemoveFirst();
+            current.Closed = true;
+            LastDebugData.VisitedNodes.Add(current);
+            // 到达判断 (使用 Grid 距离更稳定，或者用距离阈值)
+            if (current.GridIndex == targetGrid || Vector3.Distance(current.WorldPosition, targetPos) < _cellSize)
+            {
+                var path = RetracePath(startNode, current, targetPos);
+                ondone?.Invoke(path);
+                yield break;
             }
 
-            Vector3 TargetPos = currentPos + dir * Distance;
-            Vector3 rayStart = TargetPos + Vector3.up * 2f;
-            swGetNeighbors.Start();
-            bool hitGround = false;
-            if (SparseOctree.FindNodeFirst(_octree, rayStart, Vector3.down, 6f))
+            // 获取邻居
+            foreach (Vector3Int neighborGrid in GetNeighbors(current.GridIndex))
             {
-                hitGround = true;
-            }
-            swGetNeighbors.Stop();
-            neighborCalls++;
-            if (hitGround)
-            {
-                neighbors.Add(new PathNode(TargetPos, halfsize * 2f));
+                // 如果是障碍物，直接跳过
+                if (_nav.cells.TryGetValue(neighborGrid, out NavCell cell))
+                {
+                    if (cell.flags == CellFlag.Blocked) continue;
+                }
+
+                // 2. 获取高度：如果格子存在用格子高度，不存在用 Terrain 高度
+                Vector3 neighborWorldPos = GetMixedWorldPos(neighborGrid);
+
+                // --- 核心修改结束 ---
+
+                // 3. 物理/高度检查
+                // 即使依靠物理系统，寻路也应该避免让角色走悬崖，否则物理系统会让角色卡住或滑落
+                float heightDiff = neighborWorldPos.y - current.WorldPosition.y;
+                bool isWalkable = true;
+                // 简单的坡度限制（可选：如果你希望完全由物理决定，可以注释掉这两行）
+                if (heightDiff > _maxStepHeight) isWalkable = false; // 太高爬不上去
+                if (heightDiff < -_maxDropHeight) isWalkable = false;// 太深不敢跳
+                if (!isWalkable)
+                {
+                    LastDebugData.FailedEdges.Add(current.WorldPosition);
+                    LastDebugData.FailedEdges.Add(neighborWorldPos);
+                    continue;
+                }
+
+                if (!allNodes.TryGetValue(neighborGrid, out PathNode neighborNode))
+                {
+                    neighborNode = new PathNode(neighborGrid, neighborWorldPos);
+                    allNodes[neighborGrid] = neighborNode;
+                }
+
+                if (neighborNode.Closed) continue;
+
+                float distanceCost = Vector3.Distance(current.WorldPosition, neighborWorldPos);
+                float newG = current.G + distanceCost;
+
+                if (newG < neighborNode.G || !openSet.Contains(neighborNode))
+                {
+                    neighborNode.G = newG;
+                    neighborNode.H = Vector3.Distance(neighborWorldPos, targetPos);
+                    neighborNode.Parent = current;
+
+                    if (!openSet.Contains(neighborNode))
+                        openSet.Add(neighborNode);
+                    else
+                        openSet.UpdateItem(neighborNode);
+                }
+
+                slice++;
+                if (slice >= 10f)
+                {
+                    slice = 0;
+                    yield return null;
+                }
             }
 
         }
-        return neighbors;
+        if (string.IsNullOrEmpty(LastDebugData.FailureReason))
+            LastDebugData.FailureReason = "OpenSet Empty (无路可走)";
+
+        UnityEngine.Debug.LogError($"Pathfinding Failed: {LastDebugData.FailureReason}. Visited Nodes: {LastDebugData.VisitedNodes.Count}");
+        ondone?.Invoke(null); // 没找到路径
+    }
+    private Vector3 GetMixedWorldPos(Vector3Int grid)
+    {
+        float x = (grid.x + 0.5f) * _cellSize;
+        float z = (grid.z + 0.5f) * _cellSize;
+        float y = 0;
+
+        // 策略：
+        // 1. 尝试从烘焙数据获取（最快，最准确）
+        if (_nav.cells.TryGetValue(grid, out NavCell cell))
+        {
+            y = cell.height;
         }
-    private List<Vector3> RetracePath(PathNode endNode, Vector3 actualTargetPos)
+        // 2. 如果没有烘焙数据，从 Terrain 采样（较慢，作为回退）
+        else if (terrain != null)
+        {
+            // SampleHeight 需要世界坐标的 X, Z
+            y = terrain.SampleHeight(new Vector3(x, 0, z)) + terrain.transform.position.y;
+        }
+        else
+        {
+            // 3. 既没有烘焙也没有地形，只能假设是 0 或者射线检测（这里简单给 0）
+            y = 0;
+        }
+
+        return new Vector3(x, y, z);
+    }
+    bool IsBlocked(Vector3Int current)
+    {
+        _nav.cells.TryGetValue(current, out NavCell cell);
+        if(cell.flags == CellFlag.Blocked)
+        {
+            return true;
+        }
+        return false;
+    }
+    /// <summary>
+    /// 获取有效的邻居（处理 3D 结构：平地、上坡、下坡）
+    /// </summary>
+    private IEnumerable<Vector3Int> GetNeighbors(Vector3Int centerGrid)
+    {
+        // 8 方向遍历
+        for (int x = -1; x <= 1; x++)
+        {
+            for (int z = -1; z <= 1; z++)
+            {
+                if (x == 0 && z == 0) continue;
+
+                // 简单的 2D 网格邻居，不考虑 Y 轴变化 (Y轴由地形决定)
+                yield return new Vector3Int(centerGrid.x + x, centerGrid.y, centerGrid.z + z);
+            }
+        }
+    }
+
+    private List<Vector3> RetracePath(PathNode startNode, PathNode endNode, Vector3 actualTarget)
     {
         List<Vector3> path = new List<Vector3>();
         PathNode currentNode = endNode;
 
-        path.Add(actualTargetPos);
+        // 可以在这里把 actualTarget 加进去作为最后一个点
+        path.Add(actualTarget);
 
-        while (currentNode != null)
+        while (currentNode != startNode)
         {
             path.Add(currentNode.WorldPosition);
             currentNode = currentNode.Parent;
         }
+        // path.Add(startNode.WorldPosition); // 可选：是否包含起点
         path.Reverse();
         return path;
+    }
+
+    // --- 辅助方法 ---
+
+    private Vector3Int WorldToGrid(Vector3 pos)
+    {
+        return new Vector3Int(
+            Mathf.FloorToInt(pos.x / _cellSize),
+            Mathf.FloorToInt(pos.y / _cellSize),
+            Mathf.FloorToInt(pos.z / _cellSize)
+        );
+    }
+
+    private Vector3 GetCellWorldPos(Vector3Int grid)
+    {
+        if (_nav.cells.TryGetValue(grid, out NavCell cell))
+        {
+            // X, Z 是格子中心，Y 是精确高度
+            return new Vector3(
+                (grid.x + 0.5f) * _cellSize,
+                cell.height,
+                (grid.z + 0.5f) * _cellSize
+            );
+        }
+        return Vector3.zero;
+    }
+    private float GetHeuristic(Vector3Int a, Vector3Int b)
+    {
+        // 曼哈顿距离或欧几里得距离
+        return Mathf.Abs(a.x - b.x) + Mathf.Abs(a.z - b.z);
+    }
+    // 简单的广度优先搜索，寻找最近的可行走格子
+    private Vector3Int FindNearestWalkableCell(Vector3Int start)
+    {
+        if (_nav.cells.ContainsKey(start) && _nav.cells[start].flags==CellFlag.Walkable) return start;
+
+        // 简单搜一下周围
+        for (int r = 1; r <= 2; r++)
+        {
+            for (int x = -r; x <= r; x++)
+                for (int y = -r; y <= r; y++)
+                    for (int z = -r; z <= r; z++)
+                    {
+                        Vector3Int p = start + new Vector3Int(x, y, z);
+                        if (_nav.cells.TryGetValue(p, out NavCell cell) && cell.flags==CellFlag.Walkable)
+                            return p;
+                    }
+        }
+        return start;
     }
 }

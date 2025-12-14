@@ -3,13 +3,12 @@ using UnityEngine;
 
 public class OctreePathSmoother
 {
-    private SparseOctree octree;
     private float agentRadius;
     private float maxStepHeight;
 
-    public OctreePathSmoother(SparseOctree octree, float agentRadius = 0.5f, float maxStepHeight = 0.5f)
+    public OctreePathSmoother(float agentRadius = 0.5f, float maxStepHeight = 0.5f)
     {
-        this.octree = octree;
+        //this.octree = octree;
         this.agentRadius = agentRadius;
         this.maxStepHeight = maxStepHeight;
     }
