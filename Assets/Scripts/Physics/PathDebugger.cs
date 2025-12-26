@@ -8,7 +8,7 @@ public class PathDebugger : MonoBehaviour
     public Terrain TerrainObj;
 
     [Header("Test Coordinates")]
-    // Ä¬ÈÏÌîÈëÄã±¨´íµÄ×ø±ê
+    // Ä¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ã±¨ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     public Vector3 StartPos = new Vector3(-0.90f, 1.92f, -36.40f);
     public Vector3 EndPos = new Vector3(-3.80f, -3.28f, -88.07f);
 
@@ -24,6 +24,7 @@ public class PathDebugger : MonoBehaviour
     [ContextMenu("Run Path Test")]
     public void RunTest()
     {
+        StartPos = this.transform.position;
         if (NavAsset == null) return;
 
         _finder = new NePathFinder(NavAsset, TerrainObj, MaxStep, MaxDrop);
@@ -31,39 +32,48 @@ public class PathDebugger : MonoBehaviour
         System.Diagnostics.Stopwatch sw = new System.Diagnostics.Stopwatch();
         sw.Start();
 
-        _currentPath = _finder.FindPath(StartPos, EndPos);
+        StartCoroutine(_finder.FindPathAsy(StartPos, EndPos, (path) => _currentPath = path));
 
         sw.Stop();
         Debug.Log($"Path Calculation took: {sw.ElapsedMilliseconds}ms. Result Count: {(_currentPath != null ? _currentPath.Count : 0)}");
     }
-
+    void Ondone(List<Vector3> path)
+    {
+        if(path != null)
+        {
+            _currentPath = path;
+        }else
+        {
+            _currentPath = null;
+        }
+    }
     private void OnDrawGizmos()
     {
         if (_finder == null || _finder.LastDebugData == null) return;
 
         var data = _finder.LastDebugData;
 
-        // 1. »­ÆðµãºÍÖÕµãµÄÎü¸½Î»ÖÃ (À¶É«Çò)
+        // 1. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Õµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Î»ï¿½ï¿½ (ï¿½ï¿½É«ï¿½ï¿½)
         Gizmos.color = Color.cyan;
         Gizmos.DrawSphere(data.StartSnapPos, 0.3f);
         Gizmos.DrawSphere(data.EndSnapPos, 0.3f);
 
-        // »­Êµ¼ÊÇëÇóµÄÆðµãÖÕµã (ºìÉ«X)
+        // ï¿½ï¿½Êµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Õµï¿½ (ï¿½ï¿½É«X)
         Gizmos.color = Color.red;
         Gizmos.DrawWireCube(StartPos, Vector3.one * 0.2f);
         Gizmos.DrawWireCube(EndPos, Vector3.one * 0.2f);
 
-        // 2. »­ÒÑ·ÃÎÊµÄ½Úµã (»ÆÉ«Ð¡·½¿é) - ÕâÄÜÕ¹Ê¾ËÑË÷·¶Î§À©É¢µ½ÁËÄÄÀï
+        // 2. ï¿½ï¿½ï¿½Ñ·ï¿½ï¿½ÊµÄ½Úµï¿½ (ï¿½ï¿½É«Ð¡ï¿½ï¿½ï¿½ï¿½) - ï¿½ï¿½ï¿½ï¿½Õ¹Ê¾ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Î§ï¿½ï¿½É¢ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         if (ShowVisited)
         {
-            Gizmos.color = new Color(1, 0.92f, 0.016f, 0.3f); // °ëÍ¸Ã÷»Æ
+            Gizmos.color = new Color(1, 0.92f, 0.016f, 0.3f); // ï¿½ï¿½Í¸ï¿½ï¿½ï¿½ï¿½
             foreach (var node in data.VisitedNodes)
             {
                 Gizmos.DrawCube(node.WorldPosition, Vector3.one * NavAsset.cellSize * 0.8f);
             }
         }
 
-        // 3. »­Ê§°ÜµÄ±ß (ºìÉ«Ïß) - ÕâÄÜÕ¹Ê¾ÄÄÀï±»¸ß¶ÈÏÞÖÆ¿¨×¡ÁË
+        // 3. ï¿½ï¿½Ê§ï¿½ÜµÄ±ï¿½ (ï¿½ï¿½É«ï¿½ï¿½) - ï¿½ï¿½ï¿½ï¿½Õ¹Ê¾ï¿½ï¿½ï¿½ï±»ï¿½ß¶ï¿½ï¿½ï¿½ï¿½Æ¿ï¿½×¡ï¿½ï¿½
         if (ShowFailedEdges)
         {
             Gizmos.color = Color.red;
@@ -71,12 +81,12 @@ public class PathDebugger : MonoBehaviour
             {
                 Vector3 from = data.FailedEdges[i];
                 Vector3 to = data.FailedEdges[i + 1];
-                //ÉÔÎ¢Ì§¸ßÒ»µãÒÔÃâ±»µØÐÎÕÚµ²
+                //ï¿½ï¿½Î¢Ì§ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½â±»ï¿½ï¿½ï¿½ï¿½ï¿½Úµï¿½
                 Gizmos.DrawLine(from + Vector3.up * 0.2f, to + Vector3.up * 0.2f);
             }
         }
 
-        // 4. »­×îÖÕÂ·¾¶ (ÂÌÉ«´ÖÏß)
+        // 4. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â·ï¿½ï¿½ (ï¿½ï¿½É«ï¿½ï¿½ï¿½ï¿½)
         if (_currentPath != null && _currentPath.Count > 1)
         {
             Gizmos.color = Color.green;

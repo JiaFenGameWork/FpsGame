@@ -4,36 +4,36 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using Unity.VisualScripting;
 using UnityEngine;
-using static NavigationGrid; // ÒıÓÃÄãµÄ NavCell ¶¨Òå
+using static NavigationGrid; // å¼•ç”¨ä½ çš„ NavCell å®šä¹‰
 
 public class NePathFinder
 {
     private Terrain terrain;
     private readonly NavMeshAsset _nav;
-    private readonly float _maxStepHeight; // ×î´óÉÏÆÂ¸ß¶È
-    private readonly float _maxDropHeight; // ×î´óÏÂÆÂ¸ß¶È
+    private readonly float _maxStepHeight; // æœ€å¤§ä¸Šå¡é«˜åº¦
+    private readonly float _maxDropHeight; // æœ€å¤§ä¸‹å¡é«˜åº¦
     private readonly float _cellSize;
     public DebugContext LastDebugData;
     public class DebugContext
     {
-        public List<PathNode> VisitedNodes = new List<PathNode>(); // ÒÑ¾­ËÑË÷¹ıµÄµã (ClosedSet)
-        public List<Vector3> FailedEdges = new List<Vector3>();    // ³¢ÊÔ¹ıµ«Ê§°ÜµÄ±ß£¨ÓÃÓÚ»­Ïß£©
+        public List<PathNode> VisitedNodes = new List<PathNode>(); // å·²ç»æœç´¢è¿‡çš„ç‚¹ (ClosedSet)
+        public List<Vector3> FailedEdges = new List<Vector3>();    // å°è¯•è¿‡ä½†å¤±è´¥çš„è¾¹ï¼ˆç”¨äºç”»çº¿ï¼‰
         public Vector3 StartSnapPos;
         public Vector3 EndSnapPos;
         public string FailureReason;
     }
-    // ½ÚµãÀà£¬ÊµÏÖ¶Ñ½Ó¿Ú
+    // èŠ‚ç‚¹ç±»ï¼Œå®ç°å †æ¥å£
     public class PathNode : IHeapItem<PathNode>
     {
         public Vector3Int GridIndex;
-        public Vector3 WorldPosition; // »º´æ¾«È·µÄÊÀ½ç×ø±ê£¨°üº¬ NavCell.height£©
+        public Vector3 WorldPosition; // ç¼“å­˜ç²¾ç¡®çš„ä¸–ç•Œåæ ‡ï¼ˆåŒ…å« NavCell.heightï¼‰
         public PathNode Parent;
 
         public float G;
         public float H;
         public float F => G + H;
 
-        public bool Closed; // Ìæ´ú ClosedSet HashSet£¬ĞÔÄÜ¸ü¸ß
+        public bool Closed; // æ›¿ä»£ ClosedSet HashSetï¼Œæ€§èƒ½æ›´é«˜
         int heapIndex;
 
         public PathNode(Vector3Int gridIndex, Vector3 worldPos)
@@ -55,7 +55,7 @@ public class NePathFinder
             {
                 compare = H.CompareTo(other.H);
             }
-            return -compare; // MinHeap ĞèÒª·´×ª±È½Ï½á¹û
+            return -compare; // MinHeap éœ€è¦åè½¬æ¯”è¾ƒç»“æœ
         }
     }
 
@@ -69,28 +69,28 @@ public class NePathFinder
     }
 
     /// <summary>
-    /// ºËĞÄÑ°Â··½·¨
+    /// æ ¸å¿ƒå¯»è·¯æ–¹æ³•
     /// </summary>
     public List<Vector3> FindPath(Vector3 startPos, Vector3 targetPos)
     {
         LastDebugData = new DebugContext();
-        // 1. ×ø±ê×ª»»ÓëÎü¸½
+        // 1. åæ ‡è½¬æ¢ä¸å¸é™„
         Vector3Int startGrid = WorldToGrid(startPos);
         Vector3Int targetGrid = WorldToGrid(targetPos);
-        UnityEngine.Debug.Log("¿ªÊ¼Ñ°Â·");
-        // Èç¹ûÈÔÎŞĞ§£¬Ö±½Ó·µ»Ø
+        UnityEngine.Debug.Log("å¼€å§‹å¯»è·¯");
+        // å¦‚æœä»æ— æ•ˆï¼Œç›´æ¥è¿”å›
         if (!_nav.bounds.Contains(startGrid) || !_nav.bounds.Contains(targetGrid))
         {
-            UnityEngine.Debug.LogWarning("Æğµã»òÖÕµãÔÚµØÍ¼±ß½çÍâ");
+            UnityEngine.Debug.LogWarning("èµ·ç‚¹æˆ–ç»ˆç‚¹åœ¨åœ°å›¾è¾¹ç•Œå¤–");
             return null;
         }
-        if (IsBlocked(targetGrid)||IsBlocked(startGrid))
+        if (IsBlocked(targetGrid))
         {
-            UnityEngine.Debug.LogWarning("ÆğµãºÍÖÕµã±»×èµ²");
+            UnityEngine.Debug.LogWarning("èµ·ç‚¹å’Œç»ˆç‚¹è¢«é˜»æŒ¡");
             return null;
         }
-        // 2. ³õÊ¼»¯Êı¾İ½á¹¹
-        // Ô¤¹À¶Ñ´óĞ¡£º¸ñ×Ó×ÜÊıµÄÒ»Ğ¡²¿·Ö£¬»òÕßÓ²±àÂëÒ»¸ö×ã¹»´óµÄÊı
+        // 2. åˆå§‹åŒ–æ•°æ®ç»“æ„
+        // é¢„ä¼°å †å¤§å°ï¼šæ ¼å­æ€»æ•°çš„ä¸€å°éƒ¨åˆ†ï¼Œæˆ–è€…ç¡¬ç¼–ç ä¸€ä¸ªè¶³å¤Ÿå¤§çš„æ•°
         MinHeap<PathNode> openSet = new MinHeap<PathNode>(2048);
         Dictionary<Vector3Int, PathNode> allNodes = new Dictionary<Vector3Int, PathNode>();
         LastDebugData.StartSnapPos = startGrid;
@@ -103,7 +103,7 @@ public class NePathFinder
         allNodes.Add(startGrid, startNode);
 
         int iterations = 0;
-        int maxIterations = 5000; // ·ÀÖ¹ËÀÑ­»·
+        int maxIterations = 5000; // é˜²æ­¢æ­»å¾ªç¯
 
         while (openSet.Count > 0)
         {
@@ -113,33 +113,33 @@ public class NePathFinder
             PathNode current = openSet.RemoveFirst();
             current.Closed = true;
             LastDebugData.VisitedNodes.Add(current);
-            // µ½´ïÅĞ¶Ï (Ê¹ÓÃ Grid ¾àÀë¸üÎÈ¶¨£¬»òÕßÓÃ¾àÀëãĞÖµ)
+            // åˆ°è¾¾åˆ¤æ–­ (ä½¿ç”¨ Grid è·ç¦»æ›´ç¨³å®šï¼Œæˆ–è€…ç”¨è·ç¦»é˜ˆå€¼)
             if (current.GridIndex == targetGrid || Vector3.Distance(current.WorldPosition, targetPos) < _cellSize)
             {
                 return RetracePath(startNode, current, targetPos);
             }
 
-            // »ñÈ¡ÁÚ¾Ó
+            // è·å–é‚»å±…
             foreach (Vector3Int neighborGrid in GetNeighbors(current.GridIndex))
             {
-                // Èç¹ûÊÇÕÏ°­Îï£¬Ö±½ÓÌø¹ı
+                // å¦‚æœæ˜¯éšœç¢ç‰©ï¼Œç›´æ¥è·³è¿‡
                 if (_nav.cells.TryGetValue(neighborGrid, out NavCell cell))
                 {
                     if (cell.flags == CellFlag.Blocked) continue;
                 }
 
-                // 2. »ñÈ¡¸ß¶È£ºÈç¹û¸ñ×Ó´æÔÚÓÃ¸ñ×Ó¸ß¶È£¬²»´æÔÚÓÃ Terrain ¸ß¶È
+                // 2. è·å–é«˜åº¦ï¼šå¦‚æœæ ¼å­å­˜åœ¨ç”¨æ ¼å­é«˜åº¦ï¼Œä¸å­˜åœ¨ç”¨ Terrain é«˜åº¦
                 Vector3 neighborWorldPos = GetMixedWorldPos(neighborGrid);
 
-                // --- ºËĞÄĞŞ¸Ä½áÊø ---
+                // --- æ ¸å¿ƒä¿®æ”¹ç»“æŸ ---
 
-                // 3. ÎïÀí/¸ß¶È¼ì²é
-                // ¼´Ê¹ÒÀ¿¿ÎïÀíÏµÍ³£¬Ñ°Â·Ò²Ó¦¸Ã±ÜÃâÈÃ½ÇÉ«×ßĞüÑÂ£¬·ñÔòÎïÀíÏµÍ³»áÈÃ½ÇÉ«¿¨×¡»ò»¬Âä
+                // 3. ç‰©ç†/é«˜åº¦æ£€æŸ¥
+                // å³ä½¿ä¾é ç‰©ç†ç³»ç»Ÿï¼Œå¯»è·¯ä¹Ÿåº”è¯¥é¿å…è®©è§’è‰²èµ°æ‚¬å´–ï¼Œå¦åˆ™ç‰©ç†ç³»ç»Ÿä¼šè®©è§’è‰²å¡ä½æˆ–æ»‘è½
                 float heightDiff = neighborWorldPos.y - current.WorldPosition.y;
                 bool isWalkable = true;
-                // ¼òµ¥µÄÆÂ¶ÈÏŞÖÆ£¨¿ÉÑ¡£ºÈç¹ûÄãÏ£ÍûÍêÈ«ÓÉÎïÀí¾ö¶¨£¬¿ÉÒÔ×¢ÊÍµôÕâÁ½ĞĞ£©
-                if (heightDiff > _maxStepHeight) isWalkable = false; // Ì«¸ßÅÀ²»ÉÏÈ¥
-                if (heightDiff < -_maxDropHeight) isWalkable = false;// Ì«Éî²»¸ÒÌø
+                // ç®€å•çš„å¡åº¦é™åˆ¶ï¼ˆå¯é€‰ï¼šå¦‚æœä½ å¸Œæœ›å®Œå…¨ç”±ç‰©ç†å†³å®šï¼Œå¯ä»¥æ³¨é‡Šæ‰è¿™ä¸¤è¡Œï¼‰
+                if (heightDiff > _maxStepHeight) isWalkable = false; // å¤ªé«˜çˆ¬ä¸ä¸Šå»
+                if (heightDiff < -_maxDropHeight) isWalkable = false;// å¤ªæ·±ä¸æ•¢è·³
                 if (!isWalkable)
                 {
                     LastDebugData.FailedEdges.Add(current.WorldPosition);
@@ -172,41 +172,41 @@ public class NePathFinder
             }
         }
         if (string.IsNullOrEmpty(LastDebugData.FailureReason))
-            LastDebugData.FailureReason = "OpenSet Empty (ÎŞÂ·¿É×ß)";
+            LastDebugData.FailureReason = "OpenSet Empty (æ— è·¯å¯èµ°)";
 
         UnityEngine.Debug.LogError($"Pathfinding Failed: {LastDebugData.FailureReason}. Visited Nodes: {LastDebugData.VisitedNodes.Count}");
-        return null; // Ã»ÕÒµ½Â·¾¶
+        return null; // æ²¡æ‰¾åˆ°è·¯å¾„
     }
 
     public IEnumerator FindPathAsy(Vector3 startPos, Vector3 targetPos, Action<List<Vector3>> ondone)
     {
 
         LastDebugData = new DebugContext();
-        // 1. ×ø±ê×ª»»ÓëÎü¸½
+        // 1. åæ ‡è½¬æ¢ä¸å¸é™„
         Vector3Int startGrid = WorldToGrid(startPos);
         Vector3Int targetGrid = WorldToGrid(targetPos);
 
-        // Èç¹ûÈÔÎŞĞ§£¬Ö±½Ó·µ»Ø
+        // å¦‚æœä»æ— æ•ˆï¼Œç›´æ¥è¿”å›
         if (!_nav.bounds.Contains(startGrid) || !_nav.bounds.Contains(targetGrid))
         {
-            UnityEngine.Debug.LogWarning("Æğµã»òÖÕµãÔÚµØÍ¼±ß½çÍâ");
+            UnityEngine.Debug.LogWarning("èµ·ç‚¹æˆ–ç»ˆç‚¹åœ¨åœ°å›¾è¾¹ç•Œå¤–");
             ondone?.Invoke(null);
             yield break;
         }
-        if (IsBlocked(targetGrid) || IsBlocked(startGrid))
+        if (IsBlocked(targetGrid))
         {
-            UnityEngine.Debug.LogWarning("ÆğµãºÍÖÕµã±»×èµ²");
+            UnityEngine.Debug.LogWarning("èµ·ç‚¹å’Œç»ˆç‚¹è¢«é˜»æŒ¡");
             ondone?.Invoke(null);
             yield break;
         }
 
-        // 2. ³õÊ¼»¯Êı¾İ½á¹¹
-        // Ô¤¹À¶Ñ´óĞ¡£º¸ñ×Ó×ÜÊıµÄÒ»Ğ¡²¿·Ö£¬»òÕßÓ²±àÂëÒ»¸ö×ã¹»´óµÄÊı
+        // 2. åˆå§‹åŒ–æ•°æ®ç»“æ„
+        // é¢„ä¼°å †å¤§å°ï¼šæ ¼å­æ€»æ•°çš„ä¸€å°éƒ¨åˆ†ï¼Œæˆ–è€…ç¡¬ç¼–ç ä¸€ä¸ªè¶³å¤Ÿå¤§çš„æ•°
         MinHeap<PathNode> openSet = new MinHeap<PathNode>(2048);
         Dictionary<Vector3Int, PathNode> allNodes = new Dictionary<Vector3Int, PathNode>();
         LastDebugData.StartSnapPos = startGrid;
         LastDebugData.EndSnapPos = GetMixedWorldPos(targetGrid);
-        PathNode startNode = new PathNode(startGrid, GetCellWorldPos(startGrid));
+        PathNode startNode = new PathNode(startGrid, startPos);
         startNode.G = 0;
         startNode.H = Vector3.Distance(startNode.WorldPosition, targetPos);
 
@@ -214,8 +214,10 @@ public class NePathFinder
         allNodes.Add(startGrid, startNode);
 
         int iterations = 0;
-        int maxIterations = 5000; // ·ÀÖ¹ËÀÑ­»·
-        int slice = 0;
+        int maxIterations = 5000; // é˜²æ­¢æ­»å¾ªç¯
+        int nodesProcessedThisFrame = 0;
+        const int maxNodesPerFrame = 50; // æ¯å¸§æœ€å¤šå¤„ç†50ä¸ªèŠ‚ç‚¹ï¼Œå¯æ ¹æ®æ€§èƒ½è°ƒæ•´
+        
         while (openSet.Count > 0)
         {
             iterations++;
@@ -224,10 +226,12 @@ public class NePathFinder
                 ondone?.Invoke(null);
                 yield break;
             }
+            
             PathNode current = openSet.RemoveFirst();
             current.Closed = true;
             LastDebugData.VisitedNodes.Add(current);
-            // µ½´ïÅĞ¶Ï (Ê¹ÓÃ Grid ¾àÀë¸üÎÈ¶¨£¬»òÕßÓÃ¾àÀëãĞÖµ)
+            
+            // åˆ°è¾¾åˆ¤æ–­ (ä½¿ç”¨ Grid è·ç¦»æ›´ç¨³å®šï¼Œæˆ–è€…ç”¨è·ç¦»é˜ˆå€¼)
             if (current.GridIndex == targetGrid || Vector3.Distance(current.WorldPosition, targetPos) < _cellSize)
             {
                 var path = RetracePath(startNode, current, targetPos);
@@ -235,27 +239,27 @@ public class NePathFinder
                 yield break;
             }
 
-            // »ñÈ¡ÁÚ¾Ó
+            // è·å–é‚»å±…
             foreach (Vector3Int neighborGrid in GetNeighbors(current.GridIndex))
             {
-                // Èç¹ûÊÇÕÏ°­Îï£¬Ö±½ÓÌø¹ı
+                // å¦‚æœæ˜¯éšœç¢ç‰©ï¼Œç›´æ¥è·³è¿‡
                 if (_nav.cells.TryGetValue(neighborGrid, out NavCell cell))
                 {
                     if (cell.flags == CellFlag.Blocked) continue;
                 }
 
-                // 2. »ñÈ¡¸ß¶È£ºÈç¹û¸ñ×Ó´æÔÚÓÃ¸ñ×Ó¸ß¶È£¬²»´æÔÚÓÃ Terrain ¸ß¶È
+                // 2. è·å–é«˜åº¦ï¼šå¦‚æœæ ¼å­å­˜åœ¨ç”¨æ ¼å­é«˜åº¦ï¼Œä¸å­˜åœ¨ç”¨ Terrain é«˜åº¦
                 Vector3 neighborWorldPos = GetMixedWorldPos(neighborGrid);
 
-                // --- ºËĞÄĞŞ¸Ä½áÊø ---
+                // --- æ ¸å¿ƒä¿®æ”¹ç»“æŸ ---
 
-                // 3. ÎïÀí/¸ß¶È¼ì²é
-                // ¼´Ê¹ÒÀ¿¿ÎïÀíÏµÍ³£¬Ñ°Â·Ò²Ó¦¸Ã±ÜÃâÈÃ½ÇÉ«×ßĞüÑÂ£¬·ñÔòÎïÀíÏµÍ³»áÈÃ½ÇÉ«¿¨×¡»ò»¬Âä
+                // 3. ç‰©ç†/é«˜åº¦æ£€æŸ¥
+                // å³ä½¿ä¾é ç‰©ç†ç³»ç»Ÿï¼Œå¯»è·¯ä¹Ÿåº”è¯¥é¿å…è®©è§’è‰²èµ°æ‚¬å´–ï¼Œå¦åˆ™ç‰©ç†ç³»ç»Ÿä¼šè®©è§’è‰²å¡ä½æˆ–æ»‘è½
                 float heightDiff = neighborWorldPos.y - current.WorldPosition.y;
                 bool isWalkable = true;
-                // ¼òµ¥µÄÆÂ¶ÈÏŞÖÆ£¨¿ÉÑ¡£ºÈç¹ûÄãÏ£ÍûÍêÈ«ÓÉÎïÀí¾ö¶¨£¬¿ÉÒÔ×¢ÊÍµôÕâÁ½ĞĞ£©
-                if (heightDiff > _maxStepHeight) isWalkable = false; // Ì«¸ßÅÀ²»ÉÏÈ¥
-                if (heightDiff < -_maxDropHeight) isWalkable = false;// Ì«Éî²»¸ÒÌø
+                // ç®€å•çš„å¡åº¦é™åˆ¶ï¼ˆå¯é€‰ï¼šå¦‚æœä½ å¸Œæœ›å®Œå…¨ç”±ç‰©ç†å†³å®šï¼Œå¯ä»¥æ³¨é‡Šæ‰è¿™ä¸¤è¡Œï¼‰
+               // if (heightDiff > _maxStepHeight) isWalkable = false; // å¤ªé«˜çˆ¬ä¸ä¸Šå»
+              //  if (heightDiff < -_maxDropHeight) isWalkable = false;// å¤ªæ·±ä¸æ•¢è·³
                 if (!isWalkable)
                 {
                     LastDebugData.FailedEdges.Add(current.WorldPosition);
@@ -285,21 +289,21 @@ public class NePathFinder
                     else
                         openSet.UpdateItem(neighborNode);
                 }
-
-                slice++;
-                if (slice >= 10f)
-                {
-                    slice = 0;
-                    yield return null;
-                }
             }
-
+            
+            // æ¯å¤„ç†å®Œä¸€ä¸ªèŠ‚ç‚¹åæ£€æŸ¥æ˜¯å¦éœ€è¦åˆ†å¸§
+            nodesProcessedThisFrame++;
+            if (nodesProcessedThisFrame >= maxNodesPerFrame)
+            {
+                nodesProcessedThisFrame = 0;
+                yield return null; // ä¸‹ä¸€å¸§ç»§ç»­
+            }
         }
         if (string.IsNullOrEmpty(LastDebugData.FailureReason))
-            LastDebugData.FailureReason = "OpenSet Empty (ÎŞÂ·¿É×ß)";
+            LastDebugData.FailureReason = "OpenSet Empty (æ— è·¯å¯èµ°)";
 
         UnityEngine.Debug.LogError($"Pathfinding Failed: {LastDebugData.FailureReason}. Visited Nodes: {LastDebugData.VisitedNodes.Count}");
-        ondone?.Invoke(null); // Ã»ÕÒµ½Â·¾¶
+        ondone?.Invoke(null); // æ²¡æ‰¾åˆ°è·¯å¾„
     }
     private Vector3 GetMixedWorldPos(Vector3Int grid)
     {
@@ -307,21 +311,21 @@ public class NePathFinder
         float z = (grid.z + 0.5f) * _cellSize;
         float y = 0;
 
-        // ²ßÂÔ£º
-        // 1. ³¢ÊÔ´Óºæ±ºÊı¾İ»ñÈ¡£¨×î¿ì£¬×î×¼È·£©
+        // ç­–ç•¥ï¼š
+        // 1. å°è¯•ä»çƒ˜ç„™æ•°æ®è·å–ï¼ˆæœ€å¿«ï¼Œæœ€å‡†ç¡®ï¼‰
         if (_nav.cells.TryGetValue(grid, out NavCell cell))
         {
             y = cell.height;
         }
-        // 2. Èç¹ûÃ»ÓĞºæ±ºÊı¾İ£¬´Ó Terrain ²ÉÑù£¨½ÏÂı£¬×÷Îª»ØÍË£©
+        // 2. å¦‚æœæ²¡æœ‰çƒ˜ç„™æ•°æ®ï¼Œä» Terrain é‡‡æ ·ï¼ˆè¾ƒæ…¢ï¼Œä½œä¸ºå›é€€ï¼‰
         else if (terrain != null)
         {
-            // SampleHeight ĞèÒªÊÀ½ç×ø±êµÄ X, Z
+            // SampleHeight éœ€è¦ä¸–ç•Œåæ ‡çš„ X, Z
             y = terrain.SampleHeight(new Vector3(x, 0, z)) + terrain.transform.position.y;
         }
         else
         {
-            // 3. ¼ÈÃ»ÓĞºæ±ºÒ²Ã»ÓĞµØĞÎ£¬Ö»ÄÜ¼ÙÉèÊÇ 0 »òÕßÉäÏß¼ì²â£¨ÕâÀï¼òµ¥¸ø 0£©
+            // 3. æ—¢æ²¡æœ‰çƒ˜ç„™ä¹Ÿæ²¡æœ‰åœ°å½¢ï¼Œåªèƒ½å‡è®¾æ˜¯ 0 æˆ–è€…å°„çº¿æ£€æµ‹ï¼ˆè¿™é‡Œç®€å•ç»™ 0ï¼‰
             y = 0;
         }
 
@@ -337,18 +341,18 @@ public class NePathFinder
         return false;
     }
     /// <summary>
-    /// »ñÈ¡ÓĞĞ§µÄÁÚ¾Ó£¨´¦Àí 3D ½á¹¹£ºÆ½µØ¡¢ÉÏÆÂ¡¢ÏÂÆÂ£©
+    /// è·å–æœ‰æ•ˆçš„é‚»å±…ï¼ˆå¤„ç† 3D ç»“æ„ï¼šå¹³åœ°ã€ä¸Šå¡ã€ä¸‹å¡ï¼‰
     /// </summary>
     private IEnumerable<Vector3Int> GetNeighbors(Vector3Int centerGrid)
     {
-        // 8 ·½Ïò±éÀú
+        // 8 æ–¹å‘éå†
         for (int x = -1; x <= 1; x++)
         {
             for (int z = -1; z <= 1; z++)
             {
                 if (x == 0 && z == 0) continue;
 
-                // ¼òµ¥µÄ 2D Íø¸ñÁÚ¾Ó£¬²»¿¼ÂÇ Y Öá±ä»¯ (YÖáÓÉµØĞÎ¾ö¶¨)
+                // ç®€å•çš„ 2D ç½‘æ ¼é‚»å±…ï¼Œä¸è€ƒè™‘ Y è½´å˜åŒ– (Yè½´ç”±åœ°å½¢å†³å®š)
                 yield return new Vector3Int(centerGrid.x + x, centerGrid.y, centerGrid.z + z);
             }
         }
@@ -359,7 +363,7 @@ public class NePathFinder
         List<Vector3> path = new List<Vector3>();
         PathNode currentNode = endNode;
 
-        // ¿ÉÒÔÔÚÕâÀï°Ñ actualTarget ¼Ó½øÈ¥×÷Îª×îºóÒ»¸öµã
+        // å¯ä»¥åœ¨è¿™é‡ŒæŠŠ actualTarget åŠ è¿›å»ä½œä¸ºæœ€åä¸€ä¸ªç‚¹
         path.Add(actualTarget);
 
         while (currentNode != startNode)
@@ -367,12 +371,12 @@ public class NePathFinder
             path.Add(currentNode.WorldPosition);
             currentNode = currentNode.Parent;
         }
-        // path.Add(startNode.WorldPosition); // ¿ÉÑ¡£ºÊÇ·ñ°üº¬Æğµã
+        // path.Add(startNode.WorldPosition); // å¯é€‰ï¼šæ˜¯å¦åŒ…å«èµ·ç‚¹
         path.Reverse();
         return path;
     }
 
-    // --- ¸¨Öú·½·¨ ---
+    // --- è¾…åŠ©æ–¹æ³• ---
 
     private Vector3Int WorldToGrid(Vector3 pos)
     {
@@ -387,7 +391,7 @@ public class NePathFinder
     {
         if (_nav.cells.TryGetValue(grid, out NavCell cell))
         {
-            // X, Z ÊÇ¸ñ×ÓÖĞĞÄ£¬Y ÊÇ¾«È·¸ß¶È
+            // X, Z æ˜¯æ ¼å­ä¸­å¿ƒï¼ŒY æ˜¯ç²¾ç¡®é«˜åº¦
             return new Vector3(
                 (grid.x + 0.5f) * _cellSize,
                 cell.height,
@@ -398,15 +402,15 @@ public class NePathFinder
     }
     private float GetHeuristic(Vector3Int a, Vector3Int b)
     {
-        // Âü¹ş¶Ù¾àÀë»òÅ·¼¸ÀïµÃ¾àÀë
+        // æ›¼å“ˆé¡¿è·ç¦»æˆ–æ¬§å‡ é‡Œå¾—è·ç¦»
         return Mathf.Abs(a.x - b.x) + Mathf.Abs(a.z - b.z);
     }
-    // ¼òµ¥µÄ¹ã¶ÈÓÅÏÈËÑË÷£¬Ñ°ÕÒ×î½üµÄ¿ÉĞĞ×ß¸ñ×Ó
+    // ç®€å•çš„å¹¿åº¦ä¼˜å…ˆæœç´¢ï¼Œå¯»æ‰¾æœ€è¿‘çš„å¯è¡Œèµ°æ ¼å­
     private Vector3Int FindNearestWalkableCell(Vector3Int start)
     {
         if (_nav.cells.ContainsKey(start) && _nav.cells[start].flags==CellFlag.Walkable) return start;
 
-        // ¼òµ¥ËÑÒ»ÏÂÖÜÎ§
+        // ç®€å•æœä¸€ä¸‹å‘¨å›´
         for (int r = 1; r <= 2; r++)
         {
             for (int x = -r; x <= r; x++)

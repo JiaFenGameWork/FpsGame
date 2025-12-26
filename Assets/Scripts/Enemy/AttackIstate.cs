@@ -9,7 +9,7 @@ public interface AttackIstate
 
     bool TryStartAttack(Transform target);
 
-    void Tick(float dt);
+    void Tick();
 
     void Cancel();
 }

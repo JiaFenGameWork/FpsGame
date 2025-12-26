@@ -4,13 +4,24 @@ using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class PlayerState : MonoBehaviour
+public class PlayerState : MonoBehaviour,IDamageable
 {
-    public int max_hp = 10;
-    public int current_hp;
+    public float max_hp = 10;
+    public float current_hp;
     public List<Image> images;
+
+    public event Action<AttackData> OnTakeDamage;
+    public event Action OnDeath;
+
+    public float CurrentHealth => current_hp;
+    public bool IsInvincible = false;
+    public float MaxHealth => max_hp;
+    private PlayerMovement movement;
+    public bool IsDead => false;
+
     void Start()
     {
+        movement = GetComponent<PlayerMovement>();
         this.GetComponents<Image>();
         current_hp = max_hp;
     }
@@ -52,5 +63,27 @@ public class PlayerState : MonoBehaviour
 
         }
     }
-    
+
+
+
+    public void TakeDamage(AttackData attackData)
+    {
+        if (IsInvincible) return;
+
+        current_hp-= attackData.damage;
+        OnTakeDamage?.Invoke(attackData);
+
+        // CharacterController 玩家不要用 Rigidbody.AddForce；击退/硬直交给 PlayerMovement
+        if (movement != null&&attackData.KnockUp)
+        {
+            Vector3 attackerPos = attackData.transform != null ? attackData.transform.position : transform.position - transform.forward;
+            movement.ApplyHit(attackerPos, attackData.KnockUp);
+        }
+        Debug.Log(current_hp);
+    }
+
+    public void Die()
+    {
+        throw new NotImplementedException();
+    }
 }

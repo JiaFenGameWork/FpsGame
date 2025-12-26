@@ -4,9 +4,9 @@ using UnityEngine;
 
 public interface IState
 {
-    void OnEnter();  // ½øÈë×´Ì¬Ê±´¥·¢£¨²¥·Å¶¯»­¡¢ÖØÖÃ¼ÆÊ±Æ÷£©
-    void Tick();     // Ã¿Ö¡Âß¼­£¨Ïàµ±ÓÚUpdate£©
-    void OnExit();   // ÍË³ö×´Ì¬Ê±´¥·¢£¨ÇåÀíÊý¾Ý¡¢Í£Ö¹¶¯»­£©
+    void OnEnter();  // ï¿½ï¿½ï¿½ï¿½×´Ì¬Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Å¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã¼ï¿½Ê±ï¿½ï¿½ï¿½ï¿½
+    void Tick();     // Ã¿Ö¡ï¿½ß¼ï¿½ï¿½ï¿½ï¿½àµ±ï¿½ï¿½Updateï¿½ï¿½
+    void OnExit();   // ï¿½Ë³ï¿½×´Ì¬Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý¡ï¿½Í£Ö¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 }
 public class StateMachine
 {
@@ -17,6 +17,7 @@ public class StateMachine
         if(_currentState!=null) _currentState.OnExit();
         _currentState = newState;
         _currentState.OnEnter();
+        Debug.Log($"State changed to {newState.GetType().Name}");
     }
     public void Update()
     {

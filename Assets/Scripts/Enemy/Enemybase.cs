@@ -13,13 +13,26 @@ public interface IDamageable
 
     bool IsDead { get; }
   
-    event Action<float> OnTakeDamage;
+    event Action<AttackData> OnTakeDamage;
     
     event Action OnDeath;
     
-    void TakeDamage(float amount);
+    void TakeDamage(AttackData attackData);
     
     void Die();
+}
+public enum DamageType
+{
+    normal,
+    lighting,
+
+}
+public struct DamageInfo
+{
+    public float Damage;
+    public GameObject Attacker;
+    public bool IsWeakPoint;
+    public DamageType DamageType;
 }
 public interface IEnemy
 {

@@ -10,6 +10,16 @@ public class MouseMovementBehaviour : MonoBehaviour
     float yRotation = 0f;
     public float topClamp = -90f;
     public float bottomClamp = 90f;
+
+    // Recoil variables
+    private float recoilPool = 0f;
+    public float recoilSpeed = 10f;
+
+    public void AddRecoil(float amount)
+    {
+        recoilPool += amount;
+    }
+
     void Start()
     {
         Cursor.lockState = CursorLockMode.Locked;     
@@ -20,6 +30,14 @@ public class MouseMovementBehaviour : MonoBehaviour
     {
         float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity * Time.deltaTime;
         float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity * Time.deltaTime;
+        
+        if (recoilPool > 0)
+        {
+            float recoilStep = recoilPool * recoilSpeed * Time.deltaTime;
+            recoilPool -= recoilStep;
+            xRotation -= recoilStep;
+        }
+
         xRotation -= mouseY;
         xRotation = Mathf.Clamp(xRotation, topClamp, bottomClamp);
         yRotation += mouseX;
