@@ -60,15 +60,21 @@ public class ObjectPool<T> where T : Component
     /// </summary>
     public T Get()
     {
-        T obj;
+        T obj = null;
         
-        if (_pool.Count > 0)
+        // 从池中取出对象，跳过已被销毁的对象
+        while (_pool.Count > 0)
         {
             obj = _pool.Dequeue();
+            // Unity重载了==操作符，已销毁对象比较时会返回true
+            if (obj != null)
+                break;
+            obj = null;
         }
-        else
+        
+        // 池为空或全部对象都已销毁时，创建新对象
+        if (obj == null)
         {
-            // 池为空时自动扩容
             obj = CreateNewObject();
         }
         
@@ -160,13 +166,20 @@ public class GameObjectPool
     
     public GameObject Get()
     {
-        GameObject obj;
+        GameObject obj = null;
         
-        if (_pool.Count > 0)
+        // 从池中取出对象，跳过已被销毁的对象
+        while (_pool.Count > 0)
         {
             obj = _pool.Dequeue();
+            // Unity重载了==操作符，已销毁对象比较时会返回true
+            if (obj != null)
+                break;
+            obj = null;
         }
-        else
+        
+        // 池为空或全部对象都已销毁时，创建新对象
+        if (obj == null)
         {
             obj = UnityEngine.Object.Instantiate(_prefab, _parent);
         }

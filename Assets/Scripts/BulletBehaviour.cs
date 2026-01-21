@@ -1,23 +1,37 @@
 using System;
 using UnityEngine;
+using UnityEngine.VFX;
 
 public class BulletBehaviour : MonoBehaviour
 {
     public GameObject HitSplash;
     public Transform owner;
-    
+    public float lifeTime = 10f;
+    public bool isVFX = false;
     // 对象池归还回调
     private Action<GameObject> _returnAction;
     private bool _hasHit = false;  // 防止重复触发
-
+    private VisualEffect VFX;
     /// <summary>
     /// 设置归还到对象池的回调
     /// </summary>
-    public void SetReturnAction(Action<GameObject> returnAction)
+    public void SetReturn(Action<GameObject> returnAction, float lifeTime)
     {
         _returnAction = returnAction;
+        this.lifeTime = lifeTime;
     }
-
+    void Update()
+    {
+        if(VFX == null && isVFX)
+        {
+            VFX = GetComponent<VisualEffect>();
+        }
+        lifeTime -= Time.deltaTime;
+        if (lifeTime <= 0)
+        {
+            ReturnToPool();
+        }
+    }
     /// <summary>
     /// 重置子弹状态（从池中取出时调用）
     /// </summary>
@@ -25,6 +39,17 @@ public class BulletBehaviour : MonoBehaviour
     {
         _hasHit = false;
         owner = null;
+        if (VFX == null && isVFX)
+        {
+            VFX = GetComponent<VisualEffect>();
+        }
+        if (isVFX && VFX != null)
+        {
+            VFX.SetBool("Alive", true);
+            VFX.Reinit();
+            VFX.Play();
+        }
+
     }
 
     /// <summary>
@@ -55,14 +80,17 @@ public class BulletBehaviour : MonoBehaviour
         {
             return;
         }
-        
+        Debug.Log("Hit: " + other.name);
         // 检查是否命中可伤害对象
         IDamageable damageable = other.GetComponentInParent<IDamageable>();
 
         if (damageable != null)
         {
-            Debug.Log("hit");
             damageable.TakeDamage(new AttackData(owner, 10f, false, false));
+            if (isVFX && VFX != null)
+            {
+                VFX.SetBool("Alive", false);
+            }
             SpawnHitEffect();
             ReturnToPool();
             return;
@@ -71,6 +99,10 @@ public class BulletBehaviour : MonoBehaviour
         // 检查是否命中障碍物
         if (other.gameObject.CompareTag("Obstacle"))
         {
+            if (isVFX && VFX != null)
+            {
+                VFX.SetBool("Alive", false);
+            }
             SpawnHitEffect();
             ReturnToPool();
         }
@@ -83,6 +115,7 @@ public class BulletBehaviour : MonoBehaviour
     {
         if (HitSplash != null)
         {
+            Debug.Log("ggogoogogogoo");
             Instantiate(HitSplash, transform.position, transform.rotation);
         }
     }

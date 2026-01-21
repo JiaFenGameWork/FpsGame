@@ -232,7 +232,7 @@ public class NePathFinder
             LastDebugData.VisitedNodes.Add(current);
             
             // 到达判断 (使用 Grid 距离更稳定，或者用距离阈值)
-            if (current.GridIndex == targetGrid || Vector3.Distance(current.WorldPosition, targetPos) < _cellSize)
+            if (current.GridIndex == targetGrid || Vector2.Distance(new Vector2 (current.GridIndex.x, current.GridIndex.z), new Vector2 (targetGrid.x, targetGrid.z)) < _cellSize)
             {
                 var path = RetracePath(startNode, current, targetPos);
                 ondone?.Invoke(path);
@@ -242,8 +242,9 @@ public class NePathFinder
             // 获取邻居
             foreach (Vector3Int neighborGrid in GetNeighbors(current.GridIndex))
             {
+                Vector3Int neighborGridY = new Vector3Int(neighborGrid.x, neighborGrid.y + (int)_cellSize, neighborGrid.z);
                 // 如果是障碍物，直接跳过
-                if (_nav.cells.TryGetValue(neighborGrid, out NavCell cell))
+                if (_nav.cells.TryGetValue(neighborGridY, out NavCell cell))
                 {
                     if (cell.flags == CellFlag.Blocked) continue;
                 }
@@ -334,7 +335,7 @@ public class NePathFinder
     bool IsBlocked(Vector3Int current)
     {
         _nav.cells.TryGetValue(current, out NavCell cell);
-        if(cell.flags == CellFlag.Blocked)
+        if(cell.flags == CellFlag.Blocked&&cell.flags != CellFlag.Walkable)
         {
             return true;
         }

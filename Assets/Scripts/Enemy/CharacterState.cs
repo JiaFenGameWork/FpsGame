@@ -23,7 +23,7 @@ public class CharacterState : MonoBehaviour, IDamageable
     private Image healthBarBackground;
     private Coroutine hideCoroutine;
     private Camera mainCamera;
-
+    public float deadAnimationDuration = 1f;
     public float CurrentHealth => currentHp;
     public float MaxHealth => MaxHp;
     public bool IsDead => currentHp <= 0;
@@ -153,8 +153,6 @@ public class CharacterState : MonoBehaviour, IDamageable
         if (currentHp <= 0)
         {
             currentHp = 0;
-            Die();
-            OnDeath?.Invoke();
         }
         Debug.Log($"take damage: {attackData.damage}");
         Debug.Log($"currentHp: {currentHp}");
@@ -174,6 +172,7 @@ public class CharacterState : MonoBehaviour, IDamageable
         if (renderer == null || Deadmaterial == null)
         {
             Debug.LogWarning("DieAnimation: renderer 或 Deadmaterial 为空，直接销毁对象");
+            yield return new WaitForSeconds(deadAnimationDuration);
             Destroy(gameObject);
             yield break;
         }
@@ -188,7 +187,7 @@ public class CharacterState : MonoBehaviour, IDamageable
         // 确保从 0 开始溶解
         mat.SetFloat("_DissolveAmount", 0f);
         
-        float dissolveDuration = 1f; // 溶解动画总时长
+        float dissolveDuration = deadAnimationDuration; // 溶解动画总时长
         float elapsed = 0f;
         
         while (elapsed < dissolveDuration)

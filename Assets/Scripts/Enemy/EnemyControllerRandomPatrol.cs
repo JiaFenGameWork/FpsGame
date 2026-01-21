@@ -37,5 +37,6 @@ public class EnemyControllerRandomPatrol : BaseEnemyController
             StateMachine.ChangeState(patrolState);
         }
     }
+    
 }
 
