@@ -4,6 +4,7 @@ using UnityEngine;
 
 public class GameInit : MonoBehaviour
 {
+    public PlayerState playerState;
     AudioManager audioManager;
     public AudioClip audio;
     public GameObject BossGate;
@@ -19,14 +20,18 @@ public class GameInit : MonoBehaviour
     }
     void Update()
     {
-        
+        if (playerState.CurrentHealth <= 0)
+        {
+            Time.timeScale = 0f;
+            Debug.Log("GameOver");
+        }
     }
     void BossBattle()
     {
         Debug.Log("BossBattle");
         BossGate.SetActive(true);
         AudioClip audio = Resources.Load<AudioClip>("Sound/BossBattle");
-        audioManager.PlayMusic(audio,0.4f,2f);
+        audioManager.PlayMusic(audio,1f,2f);
 
     }
     IEnumerator PlayMusic()

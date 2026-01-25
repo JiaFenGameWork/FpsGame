@@ -75,6 +75,10 @@ public abstract class BaseEnemyController : MonoBehaviour
 
     }
 
+    public virtual void DealAOE(string aoeType,int AOEIndex)
+    {
+
+    }
     public int RequestPathAsync(Vector3 start, Vector3 end, Action<int, List<Vector3>> onDone)
     {
         _pathRequestId++;

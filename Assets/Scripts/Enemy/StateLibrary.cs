@@ -1431,7 +1431,7 @@ public class BossAttackState : IState, IAnimationEventReceiver
     // 近战伤害
     private float _meleeDamage = 15f;
     private float _meleeCombo2Damage = 25f;
-    
+    private int Forcechase = 0;
     // 近战碰撞体检测（由外部设置）
     private Collider[] _meleeHitColliders;  // 用于近战伤害检测的碰撞体（手、武器等）
     #endregion
@@ -1557,7 +1557,12 @@ public class BossAttackState : IState, IAnimationEventReceiver
     {
         if (!_isActive || _enemyController == null || _enemyController.Target == null)
             return;
-        
+        if(Forcechase>3)
+        {
+            _enemyController.StateMachine.ChangeState(_enemyController.ChaseState);
+            Forcechase = 0;
+            return;
+        }
         Transform target = _enemyController.Target;
         Vector3 toTarget = target.position - _enemyController.transform.position;
         float distance = toTarget.magnitude;
@@ -1591,6 +1596,7 @@ public class BossAttackState : IState, IAnimationEventReceiver
             AttackType attackToUse = SelectAttackType(distance, toTarget);
             if (attackToUse != AttackType.None)
             {
+
                 StartAttack(attackToUse);
             }
         }
@@ -1761,7 +1767,6 @@ public class BossAttackState : IState, IAnimationEventReceiver
                         false,
                         true
                     ));
-                    Debug.Log($"[BossAttackState] 近战命中: {overlap.name}, 伤害: {damage}");
                 }
             }
         }
@@ -1785,7 +1790,6 @@ public class BossAttackState : IState, IAnimationEventReceiver
                     false,
                     true
                 ));
-                Debug.Log($"[BossAttackState] AOE命中: {hit.name}, 伤害: {_aoeDamage}");
             }
         }
     }
@@ -1816,10 +1820,10 @@ public class BossAttackState : IState, IAnimationEventReceiver
         string[] parts = key.Split(':');
         string eventName = parts[0];
         string eventParam = parts.Length > 1 ? parts[1] : "";
-        
         switch (eventName)
         {
             case "HitStart":
+                 Forcechase = 0;
                 _canDealDamage = true;
                 _hitTargets.Clear();
                 break;
@@ -1836,46 +1840,42 @@ public class BossAttackState : IState, IAnimationEventReceiver
                 break;
                 
             case "Shoot":
-                AttackStyle.ShootBullet(_enemyController.Target, _bulletSpawnPoints, _bulletPrefab, _bulletPool, _bulletSpeed, _bulletLifeTime);
+
+                Forcechase++;
+                Debug.Log(Forcechase);
                 break;
                 
             case "ShootMuzzle":
                 int muzzleIdx = 0;
+                Forcechase++;
+                                Debug.Log(Forcechase);
                 if (!string.IsNullOrEmpty(eventParam))
                     int.TryParse(eventParam, out muzzleIdx);
                 break;
                 
             case "ShootUp":
+                Forcechase++;
                 break;
-                
-            case "AOE":
+
+            case "AOEStart":
                 if (!string.IsNullOrEmpty(eventParam))
                 {
-                    // 解析位置参数 "X,Y,Z"
-                    string[] posStrs = eventParam.Split(',');
-                    if (posStrs.Length == 3)
-                    {
-                        Vector3 aoePos = new Vector3(
-                            float.Parse(posStrs[0]),
-                            float.Parse(posStrs[1]),
-                            float.Parse(posStrs[2])
-                        );
-                        // 转换为世界坐标（相对于Boss位置）
-                        aoePos = _enemyController.transform.TransformPoint(aoePos);
-                        ExecuteAoeDamage(aoePos);
-                    }
+                   _enemyController.DealAOE("AOEStart",int.Parse(parts[1]));
                 }
-                else
+                break;
+            case "AOEEnd":
+                if (!string.IsNullOrEmpty(eventParam))
                 {
-                    // 默认在Boss前方触发AOE
-                    Vector3 aoeCenter = _enemyController.transform.position + 
-                                        _enemyController.transform.forward * _aoeRadius;
-                    ExecuteAoeDamage(aoeCenter);
+                   _enemyController.DealAOE("AOEEnd",int.Parse(parts[1]));
                 }
                 break;
         }
     }
-
+    void ShootTraceingBullet()
+    {
+        GameObject obj = GameObject.Instantiate(_bulletPrefab, _bulletSpawnPoints[0].position, _bulletSpawnPoints[0].rotation);
+        obj.GetComponent<TracingBullet>().SetTarget(_enemyController.Target);
+    }
     /// <summary>
     /// 接收动画事件（int参数）
     /// 0: 攻击结束

@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public static class AttackStyle 
+public static class AttackStyle
 {
  public static void ShootBullet(Transform target,Transform[] spawnPoints, GameObject bulletPrefab, GameObjectPool bulletPool, float bulletSpeed, float bulletLifeTime)
     {
@@ -44,6 +44,18 @@ public static class AttackStyle
         // 设置子弹速度
         Rigidbody rb = bulletGO.GetComponent<Rigidbody>();
             rb.velocity = shootDir * bulletSpeed;
+            Debug.Log($"[BossAttackState] 发射子弹 -> 枪口: {spawn.name}");
+        }
+    }
+    public static void ShootTraceingBullet(Transform target,Transform[] spawnPoints, GameObject bulletPrefab, float bulletSpeed)
+    {
+        foreach (var spawn in spawnPoints)
+        {
+        GameObject obj = GameObject.Instantiate(bulletPrefab, spawn.position, spawn.rotation);
+
+        // 设置子弹速度
+        Rigidbody rb = obj.GetComponent<Rigidbody>();
+            rb.velocity = spawn.forward * bulletSpeed;
             Debug.Log($"[BossAttackState] 发射子弹 -> 枪口: {spawn.name}");
         }
     }

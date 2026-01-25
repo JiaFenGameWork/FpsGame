@@ -10,7 +10,11 @@ public class CharacterState : MonoBehaviour, IDamageable
     [SerializeField] float MaxHp = 100f;
     float currentHp;
 
-    [Header("血条设置")]
+    [Header("UI血条（可选）")]
+    [SerializeField] Slider uiHealthSlider;             // UI血条Slider，如果设置则使用UI血条
+    [SerializeField] GameObject uiHealthBarRoot;        // UI血条根对象，用于显示/隐藏
+    
+    [Header("世界空间血条设置（UI血条为空时使用）")]
     [SerializeField] float healthBarHeight = 2f;        // 血条高度偏移
     [SerializeField] float healthBarWidth = 1f;         // 血条宽度
     [SerializeField] float healthBarDisplayTime = 1f;   // 血条显示时间
@@ -35,14 +39,25 @@ public class CharacterState : MonoBehaviour, IDamageable
     {
         currentHp = MaxHp;
         mainCamera = Camera.main;
-        CreateHealthBar();
+        
+        // 如果没有设置UI血条，则创建世界空间血条
+        if (uiHealthSlider == null)
+        {
+            CreateHealthBar();
+        }
+        else
+        {
+            // 初始化UI Slider
+            uiHealthSlider.interactable = false;
+            uiHealthSlider.maxValue = MaxHp;
+            uiHealthSlider.value = currentHp;
+        }
     }
 
     void LateUpdate()
     {
-       
-        // 让血条始终面向摄像机
-        if (healthBarCanvas != null && mainCamera != null)
+        // 世界空间血条：让血条始终面向摄像机
+        if (uiHealthSlider == null && healthBarCanvas != null && mainCamera != null)
         {
             healthBarCanvas.transform.LookAt(
                 healthBarCanvas.transform.position + mainCamera.transform.forward
@@ -102,7 +117,13 @@ public class CharacterState : MonoBehaviour, IDamageable
     /// </summary>
     void UpdateHealthBar()
     {
-        if (healthBarFill != null)
+        // 使用UI Slider血条
+        if (uiHealthSlider != null)
+        {
+            uiHealthSlider.value = currentHp;
+        }
+        // 使用世界空间血条
+        else if (healthBarFill != null)
         {
             float healthPercent = currentHp / MaxHp;
             healthBarFill.rectTransform.anchorMax = new Vector2(healthPercent, 1);
@@ -114,6 +135,26 @@ public class CharacterState : MonoBehaviour, IDamageable
     /// </summary>
     void ShowHealthBar()
     {
+        // 使用UI Slider血条
+        if (uiHealthSlider != null)
+        {
+            if (uiHealthBarRoot != null)
+            {
+                uiHealthBarRoot.SetActive(true);
+            }
+            UpdateHealthBar();
+            
+            // 停止之前的隐藏协程
+            if (hideCoroutine != null)
+            {
+                StopCoroutine(hideCoroutine);
+            }
+            // 启动新的隐藏协程
+            hideCoroutine = StartCoroutine(HideHealthBarAfterDelay());
+            return;
+        }
+        
+        // 使用世界空间血条
         if (healthBarCanvas == null) return;
 
         // 显示血条
@@ -133,10 +174,18 @@ public class CharacterState : MonoBehaviour, IDamageable
     IEnumerator HideHealthBarAfterDelay()
     {
         yield return new WaitForSeconds(healthBarDisplayTime);
-        if (healthBarCanvas != null)
+        
+        // 隐藏UI Slider血条
+        if (uiHealthSlider != null && uiHealthBarRoot != null)
+        {
+            uiHealthBarRoot.SetActive(false);
+        }
+        // 隐藏世界空间血条
+        else if (healthBarCanvas != null)
         {
             healthBarCanvas.gameObject.SetActive(false);
         }
+        
         hideCoroutine = null;
     }
 

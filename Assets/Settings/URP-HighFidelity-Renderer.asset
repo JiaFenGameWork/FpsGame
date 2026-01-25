@@ -53,7 +53,8 @@ MonoBehaviour:
     hdrDebugViewPS: {fileID: 4800000, guid: 573620ae32aec764abd4d728906d2587, type: 3}
   m_RendererFeatures:
   - {fileID: -1878332245247344467}
-  m_RendererFeatureMap: adc0de57c6d2eee5
+  - {fileID: 2581656176029881755}
+  m_RendererFeatureMap: adc0de57c6d2eee59b5574289de2d323
   m_UseNativeRenderPass: 0
   postProcessData: {fileID: 11400000, guid: 41439944d30ece34e96484bdb6645b55, type: 2}
   xrSystemData: {fileID: 11400000, guid: 60e1133243b97e347b653163a8c01b64, type: 2}
@@ -76,12 +77,6 @@ MonoBehaviour:
       type: 3}
     dataDrivenLensFlare: {fileID: 4800000, guid: 6cda457ac28612740adb23da5d39ea92,
       type: 3}
-    terrainDetailLitPS: {fileID: 4800000, guid: f6783ab646d374f94b199774402a5144,
-      type: 3}
-    terrainDetailGrassPS: {fileID: 4800000, guid: e507fdfead5ca47e8b9a768b51c291a1,
-      type: 3}
-    terrainDetailGrassBillboardPS: {fileID: 4800000, guid: 29868e73b638e48ca99a19ea58c48d90,
-      type: 3}
   m_AssetVersion: 2
   m_OpaqueLayerMask:
     serializedVersion: 2
@@ -102,3 +97,31 @@ MonoBehaviour:
   m_CopyDepthMode: 0
   m_AccurateGbufferNormals: 0
   m_IntermediateTextureMode: 1
+--- !u!114 &2581656176029881755
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7f0fa1eaaa1a6a041af33bf52ad1a5ed, type: 3}
+  m_Name: SkillRangeFeature
+  m_EditorClassIdentifier: 
+  m_Active: 1
+  settings:
+    renderPassEvent: 300
+    material: {fileID: 2100000, guid: 3b7a8c0bee07bb649935e75e767d478b, type: 2}
+    CameraHeight: 24.08
+    layerMask:
+      serializedVersion: 2
+      m_Bits: 256
+    layerMaskdepth:
+      serializedVersion: 2
+      m_Bits: 255
+    texSize: 1024
+    aspect: 500
+    near: 0.1
+    far: 1000
+    top: 500

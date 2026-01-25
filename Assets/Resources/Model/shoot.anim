@@ -17843,7 +17843,7 @@ AnimationClip:
   m_Events:
   - time: 0.43333334
     functionName: AE
-    data: shoot
+    data: Shoot
     objectReferenceParameter: {fileID: 0}
     floatParameter: 0
     intParameter: 0
