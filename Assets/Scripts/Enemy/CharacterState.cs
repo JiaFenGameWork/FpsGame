@@ -54,6 +54,10 @@ public class CharacterState : MonoBehaviour, IDamageable
         }
     }
 
+    public void RecoveryHealth(float r)
+    {
+        
+    }
     void LateUpdate()
     {
         // 世界空间血条：让血条始终面向摄像机

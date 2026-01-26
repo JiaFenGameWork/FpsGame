@@ -26,6 +26,11 @@ public class PlayerState : MonoBehaviour,IDamageable
         current_hp = max_hp;
     }
 
+    public void RecoveryHealth(float r)
+    {
+        current_hp += r;
+        if(current_hp >= max_hp) current_hp = max_hp;
+    }
     // Update is called once per frame
     void Update()
     {

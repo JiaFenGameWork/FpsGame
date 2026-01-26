@@ -16,7 +16,7 @@ public interface IDamageable
     event Action<AttackData> OnTakeDamage;
     
     event Action OnDeath;
-    
+    void RecoveryHealth(float r);
     void TakeDamage(AttackData attackData);
     
     void Die();
