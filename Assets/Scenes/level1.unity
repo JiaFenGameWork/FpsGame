@@ -21795,7 +21795,7 @@ VisualEffect:
   m_PropertySheet:
     m_Float:
       m_Array:
-      - m_Value: 0.6928855
+      - m_Value: 0.7325384
         m_Name: size
         m_Overridden: 1
     m_Vector2f:
@@ -21826,7 +21826,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1772946488}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0.67385954, z: 0, w: 0.7388595}
+  m_LocalRotation: {x: 0, y: 0.4881148, z: 0, w: 0.8727794}
   m_LocalPosition: {x: -304.5, y: 23, z: -1.4733627}
   m_LocalScale: {x: 2.1196, y: 2.1196, z: 2.1196}
   m_ConstrainProportionsScale: 0
