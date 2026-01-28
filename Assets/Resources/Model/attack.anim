@@ -55735,7 +55735,7 @@ AnimationClip:
   m_Events:
   - time: 0
     functionName: AE
-    data: AOEStart:0
+    data: AOEStart:1
     objectReferenceParameter: {fileID: 0}
     floatParameter: 0
     intParameter: 0
@@ -55749,14 +55749,14 @@ AnimationClip:
     messageOptions: 0
   - time: 1.1666666
     functionName: AE
-    data: AOEEnd:0
+    data: AOEEnd:1
     objectReferenceParameter: {fileID: 0}
     floatParameter: 0
     intParameter: 0
     messageOptions: 0
   - time: 1.2666667
     functionName: AE
-    data: AOEStart:1
+    data: AOEStart:0
     objectReferenceParameter: {fileID: 0}
     floatParameter: 0
     intParameter: 0
@@ -55770,7 +55770,7 @@ AnimationClip:
     messageOptions: 0
   - time: 2.9333334
     functionName: AE
-    data: AOEEnd:1
+    data: AOEEnd:0
     objectReferenceParameter: {fileID: 0}
     floatParameter: 0
     intParameter: 0

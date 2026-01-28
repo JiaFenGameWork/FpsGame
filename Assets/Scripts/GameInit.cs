@@ -30,16 +30,7 @@ public class GameInit : MonoBehaviour
             Time.timeScale = 0f;
             Debug.Log("GameOver");
             UI.SetActive(true);
-            TextMeshProUGUI[] text = UI.GetComponentsInChildren<TextMeshProUGUI>();
-            foreach (var uitext in text)
-            {
-                if (uitext.name == "text")
-                {
-                    uitext.text = "你输了";
-                    uitext.color = Color.red;
-                    break;
-                }
-            }
+            UI.GetComponentInChildren<TextMeshProUGUI>().text = "You Lose";
             Heart.SetActive(false);
             audioManager.StopMusic();
         }
@@ -47,15 +38,10 @@ public class GameInit : MonoBehaviour
         {
             Time.timeScale = 0f;
             UI.SetActive(true);
-            TextMeshProUGUI[] uitext = UI.GetComponentsInChildren<TextMeshProUGUI>();
-            foreach (var a in uitext)
+            TextMeshProUGUI[] te = UI.GetComponentsInChildren<TextMeshProUGUI>();
+            foreach (var a in te)
             {
-                if (a.name == "text")
-                {
-                    a.color = Color.green;
-                    a.text = "你赢了";
-                    break;
-                }
+                if (te.name == "dd") ;
             }
             Heart.SetActive(false);
             audioManager.StopMusic();

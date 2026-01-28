@@ -13,6 +13,7 @@ public class NePathFinder
     private readonly float _maxStepHeight; // 最大上坡高度
     private readonly float _maxDropHeight; // 最大下坡高度
     private readonly float _cellSize;
+    private readonly OctreePathSmoother _pathSmoother;
     public DebugContext LastDebugData;
     public class DebugContext
     {
@@ -66,6 +67,7 @@ public class NePathFinder
         _cellSize = nav.cellSize;
         _maxStepHeight = maxStepHeight;
         _maxDropHeight = maxDropHeight;
+        _pathSmoother = new OctreePathSmoother(agentRadius: _cellSize * 0.5f, maxStepHeight: _maxStepHeight);
     }
 
     /// <summary>
@@ -374,7 +376,7 @@ public class NePathFinder
         }
         // path.Add(startNode.WorldPosition); // 可选：是否包含起点
         path.Reverse();
-        return path;
+        return _pathSmoother.Smooth(path);
     }
 
     // --- 辅助方法 ---
