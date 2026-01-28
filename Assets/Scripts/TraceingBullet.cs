@@ -30,9 +30,13 @@ public class TracingBullet : MonoBehaviour
     private bool isHomingActive = false;
     private Vector3 randomOffset;
 
-    void Start()
+    void Awake()
     {
         rb = GetComponent<Rigidbody>();
+    }
+    void Start()
+    {
+
         // 初始化随机种子，避免所有子弹抖动轨迹完全一样
         randomOffset = new Vector3(Random.value, Random.value, Random.value) * 100f;
     }
@@ -63,7 +67,7 @@ public class TracingBullet : MonoBehaviour
         }
         if((transform.position-target.position).sqrMagnitude < 0.1f)
         {
-            Destroy(gameObject);
+            Destroy();
         }
     }
     void Destroy()
@@ -110,16 +114,21 @@ public class TracingBullet : MonoBehaviour
         // 让子弹视觉朝向速度方向
         transform.rotation = Quaternion.LookRotation(rb.velocity);
     }
+    public void Launch(Vector3 velocity)
+    {
+        rb.useGravity = false;
+        rb.velocity = velocity;
+    }
     void OnTriggerEnter(Collider other)
     {
         if (other.gameObject.layer == LayerMask.NameToLayer("Obstacle"))
         {
-            Destroy(gameObject);
+            Destroy();
         }
         var state = other.gameObject.GetComponent<CharacterState>();
         if (state != null)
         {
-            Destroy(gameObject);
+            Destroy();
         }
     }
     // 用于外部脚本设置目标（例如坦克发射时调用）

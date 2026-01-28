@@ -26,14 +26,14 @@ public class ChangeWeaponBehaviour : MonoBehaviour
             ChongFenQiang.SetActive(false);
             ShouQiangWeaponBehaviour.CurrentShootingMode = WeaponBehaviour.ShootingMode.Single;
         }    
+        // else if (Input.GetKeyDown(KeyCode.Alpha2))
+        // {
+        //     ShouQiang.SetActive(false);
+        //     PenZi.SetActive(true);
+        //     ChongFenQiang.SetActive(false);
+        //     PenZiWeaponBehaviour.CurrentShootingMode = WeaponBehaviour.ShootingMode.Burst;
+        // }
         else if (Input.GetKeyDown(KeyCode.Alpha2))
-        {
-            ShouQiang.SetActive(false);
-            PenZi.SetActive(true);
-            ChongFenQiang.SetActive(false);
-            PenZiWeaponBehaviour.CurrentShootingMode = WeaponBehaviour.ShootingMode.Burst;
-        }
-        else if (Input.GetKeyDown(KeyCode.Alpha3))
         {
             ShouQiang.SetActive(false);
             PenZi.SetActive(false);

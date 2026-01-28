@@ -41,7 +41,7 @@ public class GameInit : MonoBehaviour
             TextMeshProUGUI[] te = UI.GetComponentsInChildren<TextMeshProUGUI>();
             foreach (var a in te)
             {
-                if (te.name == "dd") ;
+               // if ( == "dd") ;
             }
             Heart.SetActive(false);
             audioManager.StopMusic();

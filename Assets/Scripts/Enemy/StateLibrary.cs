@@ -1842,6 +1842,7 @@ public class BossAttackState : IState, IAnimationEventReceiver
             case "Shoot":
 
                 Forcechase++;
+                ShootTraceingBullet();
                 Debug.Log(Forcechase);
                 break;
                 
@@ -1874,7 +1875,10 @@ public class BossAttackState : IState, IAnimationEventReceiver
     void ShootTraceingBullet()
     {
         GameObject obj = GameObject.Instantiate(_bulletPrefab, _bulletSpawnPoints[0].position, _bulletSpawnPoints[0].rotation);
-        obj.GetComponent<TracingBullet>().SetTarget(_enemyController.Target);
+        TracingBullet bullet =  obj.GetComponent<TracingBullet>();
+        bullet.SetTarget(_enemyController.Target);
+        bullet.Launch(_enemyController.gameObject.transform.forward * _bulletSpeed);
+        
     }
     /// <summary>
     /// 接收动画事件（int参数）
