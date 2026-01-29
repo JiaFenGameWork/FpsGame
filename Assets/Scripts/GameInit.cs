@@ -1,9 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
-using Unity.VisualScripting;
 using UnityEngine;
-using UnityEngine.Serialization;
 
 public class GameInit : MonoBehaviour
 {
@@ -14,6 +12,7 @@ public class GameInit : MonoBehaviour
     public EnemyBoss boss;
     public GameObject UI;
     public GameObject Heart;
+    private TextMeshProUGUI[] text;
     // Start is called before the first frame update
     void Start()
     {
@@ -22,6 +21,7 @@ public class GameInit : MonoBehaviour
         StartCoroutine(PlayMusic());
         boss.OnBossStart += BossBattle;
         UI.SetActive(false);
+        text = UI.GetComponentsInChildren<TextMeshProUGUI>();
     }
     void Update()
     {
@@ -30,7 +30,15 @@ public class GameInit : MonoBehaviour
             Time.timeScale = 0f;
             Debug.Log("GameOver");
             UI.SetActive(true);
-            UI.GetComponentInChildren<TextMeshProUGUI>().text = "You Lose";
+            foreach (var val in text)
+            {
+                if (val.name == "text")
+                {
+                    val.text = "你输了";
+                    val.color = Color.red;
+                    break;
+                }
+            }
             Heart.SetActive(false);
             audioManager.StopMusic();
         }
@@ -38,10 +46,14 @@ public class GameInit : MonoBehaviour
         {
             Time.timeScale = 0f;
             UI.SetActive(true);
-            TextMeshProUGUI[] te = UI.GetComponentsInChildren<TextMeshProUGUI>();
-            foreach (var a in te)
+            foreach (var val in text)
             {
-                if (te.name == "dd") ;
+                if (val.name == "text")
+                {
+                    val.text = "你赢了";
+                    val.color = Color.green;
+                    break;
+                }
             }
             Heart.SetActive(false);
             audioManager.StopMusic();
