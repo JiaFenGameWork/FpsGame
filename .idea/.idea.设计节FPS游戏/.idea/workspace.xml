@@ -4,9 +4,16 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="b534d7fd-cbc0-4957-b00a-fd22e8d9d5ed" name="Changes" comment="UI commit">
+    <list default="true" id="b534d7fd-cbc0-4957-b00a-fd22e8d9d5ed" name="Changes" comment="1.29 AddBloodBehaviour Commit">
       <change beforePath="$PROJECT_DIR$/.idea/.idea.设计节FPS游戏/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.设计节FPS游戏/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Packages/packages-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/Packages/packages-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Assets/EnemyRobots/Materials/CannonMachine/CannonMachine/CannonMachine.mat" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/EnemyRobots/Materials/CannonMachine/CannonMachine/CannonMachine.mat" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Assets/EnemyRobots/Materials/CannonMachine/CannonMachine/CannonMachine_Glass.mat" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/EnemyRobots/Materials/CannonMachine/CannonMachine/CannonMachine_Glass.mat" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Assets/EnemyRobots/Materials/Eye/Robot_Eye.mat" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/EnemyRobots/Materials/Eye/Robot_Eye.mat" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Assets/EnemyRobots/Materials/MachineGunRobot/MachineGun/MachineGunRobot_Glass.mat" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/EnemyRobots/Materials/MachineGunRobot/MachineGun/MachineGunRobot_Glass.mat" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Assets/Scenes/level1.unity" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scenes/level1.unity" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Assets/Scripts/AddBloodBehaviour.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/AddBloodBehaviour.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Assets/Scripts/GameInit.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/GameInit.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Assets/Settings/Font/Hiragino Sans GB SDF.asset" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Settings/Font/Hiragino Sans GB SDF.asset" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -59,6 +66,7 @@
     <setting file="mock:///Users/luyichen/UnityProject/设计节FPS游戏/Assets/Scenes/level1.unity" root0="SKIP_HIGHLIGHTING" />
     <setting file="mock:///Users/luyichen/UnityProject/设计节FPS游戏/Assets/Scenes/level1.unity" root0="SKIP_HIGHLIGHTING" />
     <setting file="mock:///Users/luyichen/UnityProject/设计节FPS游戏/Assets/Scenes/level1.unity" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///Users/luyichen/UnityProject/设计节FPS游戏/Assets/Scripts/AddBloodBehaviour.cs" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Assets/Scripts/BulletBehaviour.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Assets/Scripts/ChangeWeaponBehaviour.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="mock:///Users/luyichen/UnityProject/设计节FPS游戏/Assets/Scripts/Enemy/CharacterState.cs" root0="SKIP_HIGHLIGHTING" />
@@ -89,23 +97,23 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;Attach to Unity Editor.Attach to Unity Editor.executor&quot;: &quot;Debug&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;Standalone Player.Start Unity.executor&quot;: &quot;Run&quot;,
-    &quot;codeReviewSummary&quot;: &quot;[]&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Attach to Unity Editor.Attach to Unity Editor.executor": "Debug",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "Standalone Player.Start Unity.executor": "Debug",
+    "codeReviewSummary": "[]",
+    "git-widget-placeholder": "master",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "settings.editor.selected.configurable": "preferences.pluginManager",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
+}]]></component>
   <component name="RunManager" selected="Standalone Player.Start Unity">
     <configuration name="Start Unity" type="RunUnityExe" factoryName="Unity Executable">
       <option name="EXE_PATH" value="/Applications/Unity/Hub/Editor/2022.3.52f1c1/Unity.app/Contents/MacOS/Unity" />
@@ -166,7 +174,7 @@
       <workItem from="1764593651101" duration="1285000" />
       <workItem from="1765684500253" duration="7989000" />
       <workItem from="1765696187204" duration="23867000" />
-      <workItem from="1769314873938" duration="21666000" />
+      <workItem from="1769314873938" duration="28417000" />
     </task>
     <task id="LOCAL-00001" summary="First commit">
       <option name="closed" value="true" />
@@ -224,7 +232,15 @@
       <option name="project" value="LOCAL" />
       <updated>1769576915782</updated>
     </task>
-    <option name="localTasksCounter" value="8" />
+    <task id="LOCAL-00008" summary="1.29 AddBloodBehaviour Commit">
+      <option name="closed" value="true" />
+      <created>1769664474491</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1769664474491</updated>
+    </task>
+    <option name="localTasksCounter" value="9" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -255,6 +271,7 @@
     <MESSAGE value="shooting and moving commit" />
     <MESSAGE value="aaa" />
     <MESSAGE value="UI commit" />
-    <option name="LAST_COMMIT_MESSAGE" value="UI commit" />
+    <MESSAGE value="1.29 AddBloodBehaviour Commit" />
+    <option name="LAST_COMMIT_MESSAGE" value="1.29 AddBloodBehaviour Commit" />
   </component>
 </project>
